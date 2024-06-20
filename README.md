@@ -1,1 +1,1 @@
-# IoTSim_back-end
+# IoT Simulator (prototype) [WIP]
