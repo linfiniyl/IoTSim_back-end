@@ -1,9 +1,11 @@
 package com.IoTSim.management_server.context.user.model;
 
 
+import com.IoTSim.management_server.context.attribute.model.AttributeAmount;
 import com.IoTSim.management_server.context.attribute.model.AttributeTemplate;
 import com.IoTSim.management_server.context.device.model.Device;
 import com.IoTSim.management_server.context.simulation.model.Simulation;
+import com.IoTSim.management_server.context.simulation.model.SimulationProcess;
 import jakarta.persistence.Entity;
 import jakarta.persistence.*;
 import lombok.*;
@@ -20,12 +22,12 @@ import java.util.*;
 @Getter
 @Entity
 @Builder
-@Table(name = "user")
+@Table(name = "users")
 public class User implements UserDetails {
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     @Column(name = "id")
-    private long id;
+    private Long id;
     @Column(name = "first_name")
     private String firstname;
     @Column(name = "last_name")
@@ -39,20 +41,27 @@ public class User implements UserDetails {
     @Column(name = "is_enabled")
     private Boolean isEnabled;
     @Enumerated
+    @Column(name = "role", nullable = false)
     private Role role;
 
-    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OneToMany(mappedBy = "owner", cascade = CascadeType.ALL)
     private Set<AttributeTemplate> attributeTemplates = new LinkedHashSet<>();
 
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Device> entities = new LinkedHashSet<>();
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private Set<Device> devices = new LinkedHashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL)
+    private Set<Simulation> simulations = new LinkedHashSet<>();
 
     @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
-    private Set<Simulation> simulations = new LinkedHashSet<>();
+    private Set<SimulationProcess> simulationProcesses = new LinkedHashSet<>();
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<AttributeAmount> attributeAmounts = new LinkedHashSet<>();
 
     @Override
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        return List.of(new SimpleGrantedAuthority(role.name()));
+        return List.of(new SimpleGrantedAuthority(Role.USER.name()));//Баг при role.name() выкидывает исключение
     }
 
     @Override

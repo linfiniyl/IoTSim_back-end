@@ -13,11 +13,11 @@ public class RegisterRequest {
     @Schema(description = "Имя пользователя", example = "Ivan")
     @Size(min = 1, max = 25, message = "Имя пользователя должно содержать от 1 до 25 символов")
     @NotBlank(message = "Имя пользователя не должно быть пустым")
-    private String firstName;
+    private String firstname;
     @Schema(description = "Фамилия пользователя", example = "Ivanov")
     @Size(min = 1, max = 25, message = "Фамилия пользователя должна содержать от 1 до 25 символов")
     @NotBlank(message = "Фамилия пользователя не должна быть пустым")
-    private String lastName;
+    private String lastname;
     @Schema(description = "Адрес электронной почты", example = "ivanov.ivan@gmail.com")
     @Size(min = 5, max = 50, message = "Адрес электронной почты должен содержать от 5 до 50 символов")
     @NotBlank(message = "Адрес электронной почты не должен быть пустым")

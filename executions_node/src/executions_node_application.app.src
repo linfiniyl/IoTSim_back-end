@@ -1,0 +1,32 @@
+%%%-------------------------------------------------------------------
+%%% @author Дмитрий
+%%% @copyright (C) 2024, <COMPANY>
+%%% @doc
+%%%
+%%% @end
+%%% Created : 14. июнь 2024 2:02
+%%%-------------------------------------------------------------------
+{application, executions_node_application,
+    [{description, "Executions Node"},
+        {vsn, "1.0.0"},
+        {registered, []},
+        {mod, {executions_node_application, []}},
+        {applications,
+            [
+                kernel,
+                stdlib
+            ]},
+        {env, [
+            {rabbitmq_host, "localhost"},
+            {rabbitmq_port, 5672},
+            {rabbitmq_username, <<"user">>},
+            {rabbitmq_password, <<"user">>},
+            {command_and_response_queue, <<"erlang_nodes_exec_ctrl">>},
+            {command_and_response_exchange, <<"executing_code">>},
+            {command_and_response_routing_key, <<"iot_sim">>},
+            {result_reporting_queue, <<"erlang_nodes_exec_ctrl">>},
+            {result_reporting_exchange, <<"iot_sim">>},
+            {result_reporting_routing_key, <<"executing_code">>}
+        ]},
+        {licenses, ["Apache-2.0"]},
+        {extra_applications, []}]}.

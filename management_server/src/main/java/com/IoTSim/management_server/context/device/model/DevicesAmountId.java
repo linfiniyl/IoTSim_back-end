@@ -9,5 +9,5 @@ import java.io.Serializable;
 public class DevicesAmountId implements Serializable {
 
     private Long simulationId;
-    private Long entityId;
+    private Long deviceId;
 }

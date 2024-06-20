@@ -2,8 +2,8 @@ package com.IoTSim.management_server.context.user.controller;
 
 
 import com.IoTSim.management_server.api.Endpoints;
+import com.IoTSim.management_server.context.user.api.UserInfoResponse;
 import com.IoTSim.management_server.context.user.dto.UserDto;
-import com.IoTSim.management_server.context.user.model.User;
 import com.IoTSim.management_server.context.user.service.UserService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
@@ -17,32 +17,39 @@ import java.util.List;
 @RequiredArgsConstructor
 @RequestMapping(Endpoints.USERS)
 public class UserController {
-    private UserService userService;
+    private final UserService userService;
 
     @GetMapping
-    public ResponseEntity<List<UserDto>> allUsers(){
+    public ResponseEntity<List<UserInfoResponse>> allUsers(){
+
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(userService.getAllUsers());
     }
 
     @GetMapping(Endpoints.USER_ID)
-    public ResponseEntity<UserDto> getUser(@PathVariable Long id){
+    public ResponseEntity<UserInfoResponse> getUser(
+            @PathVariable Long id
+    ){
         return ResponseEntity
                 .status(HttpStatus.OK)
                 .body(userService.getUserById(id));
     }
 
     @DeleteMapping(Endpoints.USER_ID)
-    public ResponseEntity<?> deleteUser(@RequestBody Long id){
+    public ResponseEntity<?> deleteUser(
+            @PathVariable Long id
+    ){
         userService.deleteUserById(id);
         return ResponseEntity
-                .status(HttpStatus.OK)
+                .status(HttpStatus.NO_CONTENT)
                 .build();
     }
 
     @PutMapping(Endpoints.USER_ID)
-    public ResponseEntity<?> updateUser(@RequestBody UserDto userDto){
+    public ResponseEntity<?> updateUser(
+            @RequestBody UserDto userDto
+    ){
         userService.updateUser(userDto);
         return ResponseEntity
                 .status(HttpStatus.OK)

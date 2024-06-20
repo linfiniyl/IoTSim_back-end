@@ -2,14 +2,14 @@
 %% License, v. 2.0. If a copy of the MPL was not distributed with this
 %% file, You can obtain one at https://mozilla.org/MPL/2.0/.
 %%
-%% Copyright (c) 2007-2024 Broadcom. All Rights Reserved. The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries.  All rights reserved.
+%% Copyright (c) 2007-2024 Broadcom. All Rights Reserved. The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries. All rights reserved.
 %%
 
 -module(file_handle_cache_stats).
 
 %% stats about read / write operations that go through the fhc.
 
--export([init/0, update/3, update/2, update/1, get/0, inc/2]).
+-export([init/0, update/3, update/2, update/1, inc/2, get/0]).
 
 -define(TABLE, ?MODULE).
 

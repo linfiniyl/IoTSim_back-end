@@ -1,15 +1,12 @@
 package com.IoTSim.management_server.context.simulation.model;
 
+import com.IoTSim.management_server.context.attribute.model.AttributeAmount;
 import com.IoTSim.management_server.context.route.model.Route;
 import com.IoTSim.management_server.context.user.model.User;
 import com.IoTSim.management_server.context.device.model.DevicesAmount;
 import jakarta.persistence.*;
 import jakarta.persistence.Entity;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
-
+import lombok.*;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
@@ -18,6 +15,7 @@ import java.util.Set;
 @Setter
 @Getter
 @Entity
+@Builder
 @Table(name = "simulation")
 public class Simulation {
     @Id
@@ -26,19 +24,22 @@ public class Simulation {
     private Long id;
     @Column(name = "name")
     private String name;
-    @Column(name = "status")
     @Enumerated(EnumType.STRING)
-    private Status status = Status.NOT_RUNNING;
+    @Column(name = "status", nullable = false)
+    private Status simulationStatus;
+    @Column(name = "is_private")
+    private Boolean isPrivate = true;
     @OneToMany(mappedBy = "simulation", orphanRemoval = true)
     private Set<DevicesAmount> amount = new LinkedHashSet<>();
     @ManyToOne
     @JoinColumn(name = "user_id")
     private User user;
 
-    @ManyToMany
-    @JoinTable(name = "simulation_routes",
-            joinColumns = @JoinColumn(name = "simulation_id"),
-            inverseJoinColumns = @JoinColumn(name = "routes_id"))
-    private Set<Route> routes = new LinkedHashSet<>();
+    @ManyToOne
+    @JoinColumn(name = "route_id")
+    private Route route;
+
+    @OneToMany(mappedBy = "simulation", cascade = CascadeType.ALL, orphanRemoval = true)
+    private Set<AttributeAmount> attributeAmounts = new LinkedHashSet<>();
 
 }

@@ -1,8 +1,8 @@
 package com.IoTSim.management_server.context.attribute.service;
 
 import com.IoTSim.management_server.api.exceptions.AttributeNotFoundException;
-import com.IoTSim.management_server.api.exceptions.EntityNotFoundException;
-import com.IoTSim.management_server.api.exceptions.RelationEntityException;
+import com.IoTSim.management_server.api.exceptions.DeviceNotFoundException;
+import com.IoTSim.management_server.api.exceptions.RelationDeviceException;
 import com.IoTSim.management_server.api.exceptions.UserNotFoundException;
 import com.IoTSim.management_server.context.attribute.api.AttributeCreateRequest;
 import com.IoTSim.management_server.context.attribute.api.AttributeInfoResponse;
@@ -16,19 +16,19 @@ import com.IoTSim.management_server.context.attribute.model.AttributeTemplate;
 
 import com.IoTSim.management_server.context.attribute.repository.AttributeAmountRepository;
 import com.IoTSim.management_server.context.attribute.repository.AttributeTemplateRepository;
+import com.IoTSim.management_server.context.device.model.Device;
 import com.IoTSim.management_server.context.device.repository.DeviceRepository;
 import com.IoTSim.management_server.context.user.model.User;
 import com.IoTSim.management_server.context.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.ObjectUtils;
 
-import java.nio.file.AccessDeniedException;
-import java.util.ArrayList;
+
 import java.util.List;
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 @RequiredArgsConstructor
@@ -42,260 +42,301 @@ public class AttributeServiceImpl implements AttributeService {
     private final DeviceRepository deviceRepository;
 
     @Transactional
-    public void createAttributeTemplate(
+    public AttributeTemplateInfoResponse createAttributeTemplate(
             AttributeTemplateCreateRequest attributeTemplateCreateRequest
     ) {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (ObjectUtils.isEmpty(user)){
-            throw new UserNotFoundException("Пользователь не найден");
+            throw new UserNotFoundException();
         }
         AttributeTemplate attributeTemplate = mapper
                 .AttributeTemplateCreateRequestToAttributeTemplate(attributeTemplateCreateRequest);
-        attributeTemplate.setOwner(user);
-       attributeRepository.save(attributeTemplate);
+        User owner = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+        attributeTemplate.setOwner(owner);
+       return mapper
+               .AttributeTemplateToAttributeTemplateInfoResponse(
+                       attributeRepository.save(attributeTemplate)
+               );
     }
 
     @Transactional
-    public void createAttribute(
+    public AttributeInfoResponse createAttribute(
             AttributeCreateRequest attributeCreateRequest
-    ) throws AccessDeniedException {
+    ){
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (ObjectUtils.isEmpty(user)){
-            throw new UserNotFoundException("Пользователь не найден");
+            throw new UserNotFoundException();
         }
-        AttributeTemplate attributeTemplate = mapper
-                .AttributeCreateRequestToAttributeTemplate(attributeCreateRequest);
         AttributeAmount attributeAmount = mapper
-                .AttributeCreateRequestToAttributeAmount(attributeCreateRequest);
-        User owner = attributeTemplate.getOwner();
-        if (!owner.equals(user)){
-            throw new AccessDeniedException("Доступ запрещен");
+                .AttributeCreateRequestToAttributeAmount(
+                        attributeCreateRequest
+                );
+
+        AttributeTemplate attribute = attributeRepository
+                .findById(attributeAmount.getAttributeId())
+                .orElseThrow(AttributeNotFoundException::new);
+        Device device = deviceRepository
+                .findById(attributeAmount.getDeviceId())
+                .orElseThrow(DeviceNotFoundException::new);
+
+        User ownerAttribute = attribute.getOwner();
+        User ownerDevice = device.getUser();
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+
+        if (!user.equals(ownerAttribute) || !user.equals(ownerDevice)){
+            throw new AccessDeniedException("Access Denied");
         }
-        if(attributeRepository.existsById(attributeTemplate.getId())){
-            attributeAmountRepository.save(attributeAmount);
-        } else {
-            attributeTemplate = attributeRepository.saveAndFlush(attributeTemplate);
-            attributeAmount.setAttributeId(attributeTemplate.getId());
-            attributeAmountRepository.save(attributeAmount);
-        }
+        return mapper.AttributeAmountToAttributeInfoResponse(
+                attributeAmountRepository.saveAndFlush(attributeAmount)
+        );
     }
 
 
     @Transactional
     public void updateTemplate (
             AttributeTemplateDto attributeTemplateDto
-    ) throws AccessDeniedException {
+    ){
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (ObjectUtils.isEmpty(user)){
-            throw new UserNotFoundException("Пользователь не найден");
+            throw new UserNotFoundException();
         }
         AttributeTemplate attributeTemplate = mapper
                 .AttributeTemplateDtoToAttributeTemplate(attributeTemplateDto);
         Long attributeId = attributeTemplate.getId();
         if (!attributeRepository.existsById(attributeId)) {
-            throw new AttributeNotFoundException("Аттрибут не найден");
+            throw new AttributeNotFoundException();
         }
-        if (userRepository.existById(attributeTemplate.getOwner().getId())){
-            throw new UserNotFoundException("Пользователь не найден");
+        if (!userRepository.existById(attributeTemplate.getOwner().getId())){
+            throw new UserNotFoundException();
         }
         User owner = attributeTemplate.getOwner();
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
         if (!owner.equals(user)){
-            throw new AccessDeniedException("Доступ запрещен");
+            throw new AccessDeniedException("Access Denied");
         }
-        AttributeTemplate attribute = attributeRepository.findById(attributeId).get();
-        attribute.setOwner(attributeTemplate.getOwner());
-        attribute.setName(attributeTemplate.getName());
-        attribute.setDescription(attributeTemplate.getDescription());
-        attribute.setSimulationFunction(attributeTemplate.getSimulationFunction());
-        attribute.setSimulationType(attributeTemplate.getSimulationType());
-        attribute.setIsPrivate(attributeTemplate.getIsPrivate());
 
-        attributeRepository.save(attribute);
+        attributeRepository.save(
+                mapper.AttributeTemplateDtoToAttributeTemplate(attributeTemplateDto)
+        );
     }
     @Transactional
-    public void updateAttribute(
+    public void updateRelation(
             AttributeDto attributeDto
     ) throws AccessDeniedException {
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (ObjectUtils.isEmpty(user)){
-            throw new UserNotFoundException("Пользователь не найден");
-        }
-
-        AttributeTemplate attributeTemplate = mapper
-                .AttributeDtoToAttributeTemplate(attributeDto);
-        Long attributeId = attributeTemplate.getId();
-
-        if (!attributeRepository.existsById(attributeId)) {
-            throw new AttributeNotFoundException("Аттрибут не найден");
-        }
-        Long userId = attributeTemplate.getOwner().getId();
-        if (!userRepository.existById(userId)){
-            throw new UserNotFoundException("Пользователь не найден");
+            throw new UserNotFoundException();
         }
         AttributeAmount attributeAmount = mapper
                 .AttributeDtoToAttributeAmount(attributeDto);
-        Long entityId = attributeAmount.getEntityId();
-        if (!deviceRepository.existById(entityId)){
-            throw new EntityNotFoundException("Сущность не найдена");
-        }
-        AttributeTemplateDto attributeTemplateDto = mapper
-                .AttributeTemplateToAttributeTemplateDto(attributeTemplate);
-        updateTemplate(attributeTemplateDto);
 
-        if (!attributeAmountRepository.existByEntityIdAndAttributeId(entityId,attributeId)){
-            throw new RelationEntityException("Данный атрибут не принадлижит этой сущности");
+        long attributeId = attributeAmount.getAttributeId();
+        long deviceId = attributeAmount.getDeviceId();
+
+        long ownerAttributeId = attributeRepository
+                .findById(attributeId)
+                .orElseThrow(AttributeNotFoundException::new)
+                .getOwner()
+                .getId();
+
+        if (!userRepository.existById(ownerAttributeId)){
+            throw new UserNotFoundException();
         }
-        User owner = deviceRepository.findById(entityId).get().getUser();
-        if (!owner.equals(user)){
-            throw new AccessDeniedException("Доступ запрещен");
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+        if (user.getId() != ownerAttributeId){
+            throw new AccessDeniedException("Access Denied");
         }
-        if (attributeDto.getCreateNew() && !Objects.equals(attributeTemplate, attributeRepository.findById(attributeId).get()))
-        {
-            attributeTemplate = attributeRepository.saveAndFlush(attributeTemplate);
-            deleteRelationById(entityId,attributeId);
-            attributeAmountRepository.save(
-                    AttributeAmount
-                            .builder()
-                            .attributeId(attributeTemplate.getId())
-                            .entityId(entityId)
-                            .startingValue(attributeAmount.getStartingValue())
-                            .build());
-        } else {
-            AttributeAmount amount = attributeAmountRepository.findByEntityIdAndAttributeId(entityId, attributeId).get();
-            amount.setStartingValue(attributeAmount.getStartingValue());
-            attributeAmountRepository.save(amount);
+
+        long ownerDeviceId = deviceRepository
+                .findById(deviceId)
+                .orElseThrow(DeviceNotFoundException::new)
+                .getUser()
+                .getId();
+        if (!userRepository.existById(ownerDeviceId)){
+            throw new UserNotFoundException();
         }
+        if (user.getId() != ownerDeviceId){
+            throw new AccessDeniedException("Access Denied");
+        }
+
+        if (!attributeAmountRepository.existByDeviceIdAndAttributeId(deviceId,attributeId)){
+            throw new RelationDeviceException();
+        }
+        attributeAmountRepository.save(attributeAmount);
     }
 
     @Transactional
     public void deleteTemplateById(
             Long id
-    ) throws AccessDeniedException {
+    ){
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (ObjectUtils.isEmpty(user)){
-            throw new UserNotFoundException("Пользователь не найден");
-        }
-        if (!attributeRepository.existsById(id)){
-            throw new AttributeNotFoundException("Аттрибут не найден");
-        }
-        User owner = attributeRepository.findById(id).get().getOwner();
-        if (!owner.equals(user)){
-            throw new AccessDeniedException("Доступ запрещен");
-        }
-        attributeRepository.deleteById(id);
-        if (attributeAmountRepository.existByAttributeId(id)) {
-            attributeAmountRepository.deleteByAttributeId(id);
+            throw new UserNotFoundException();
         }
 
+        User owner = attributeRepository
+                .findById(id)
+                .orElseThrow(AttributeNotFoundException::new)
+                .getOwner();
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+        if (!owner.equals(user)){
+            throw new AccessDeniedException("Access Denied");
+        }
+        attributeRepository.deleteById(id);
     }
 
     @Transactional
     public void deleteRelationById(
-            Long entityId,
+            Long deviceId,
             Long attributeId
-    ) throws AccessDeniedException {
+    ){
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (ObjectUtils.isEmpty(user)){
-            throw new UserNotFoundException("Пользователь не найден");
+            throw new UserNotFoundException();
         }
-        if (!attributeAmountRepository.existByEntityIdAndAttributeId(entityId,attributeId)){
-            throw new RelationEntityException("Данный атрибут не принадлижит этой сущности");
+
+        long ownerAttributeId = attributeRepository
+                .findById(attributeId)
+                .orElseThrow(AttributeNotFoundException::new)
+                .getOwner()
+                .getId();
+
+        if (!userRepository.existById(ownerAttributeId)){
+            throw new UserNotFoundException();
         }
-        User owner = deviceRepository.findById(entityId).get().getUser();
-        if (!owner.equals(user)){
-            throw new AccessDeniedException("Доступ запрещен");
+
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+        if (user.getId() != ownerAttributeId){
+            throw new AccessDeniedException("Access Denied");
         }
-        attributeAmountRepository.deleteByEntityIdAndAttributeId(entityId,attributeId);
+        if (!deviceRepository.existById(deviceId)){
+            throw new DeviceNotFoundException();
+        }
+        long ownerDeviceId = deviceRepository
+                .findById(deviceId)
+                .orElseThrow(DeviceNotFoundException::new)
+                .getUser()
+                .getId();
+
+        if (!userRepository.existById(ownerDeviceId)){
+            throw new UserNotFoundException();
+        }
+        if (user.getId() != ownerDeviceId){
+            throw new AccessDeniedException("Access Denied");
+        }
+
+        if (!attributeAmountRepository.existByDeviceIdAndAttributeId(deviceId,attributeId)){
+            throw new RelationDeviceException();
+        }
+        attributeAmountRepository.deleteByDeviceIdAndAttributeId(deviceId,attributeId);
     }
 
 
+    @Transactional
     public AttributeTemplateInfoResponse findAttributeTemplateById(
-            Long id
-    ) throws AccessDeniedException {
+            Long attributeTemplateId
+    ){
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (ObjectUtils.isEmpty(user)){
-            throw new UserNotFoundException("Пользователь не найден");
+            throw new UserNotFoundException();
         }
-        if (!attributeRepository.existsById(id)) {
-            throw new AttributeNotFoundException("Аттрибут не найден");
-        }
-        AttributeTemplate attributeTemplate = attributeRepository.findById(id).get();
+
+        AttributeTemplate attributeTemplate = attributeRepository
+                .findById(attributeTemplateId)
+                .orElseThrow(AttributeNotFoundException::new);
         User owner = attributeTemplate.getOwner();
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
         if (!owner.equals(user)){
-            throw new AccessDeniedException("Доступ запрещен");
+            throw new AccessDeniedException("Access Denied");
         }
-        AttributeTemplateInfoResponse response = mapper
-                .AttributeTemplateToAttributeTemplateInfoResponse(attributeTemplate);
-        return  response;
+
+        return mapper
+                .AttributeTemplateToAttributeTemplateInfoResponse(
+                        attributeTemplate
+                );
     }
 
+    @Transactional
     public AttributeInfoResponse findAttributeById(
             Long attributeId,
-            Long entityId
-    ) throws AccessDeniedException {
+            Long deviceId
+    ){
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (ObjectUtils.isEmpty(user)){
-            throw new UserNotFoundException("Пользователь не найден");
+            throw new UserNotFoundException();
         }
-        if (!attributeRepository.existsById(attributeId)) {
-            throw new AttributeNotFoundException("Аттрибут не найден");
-        }
-        if (!attributeAmountRepository.existByEntityIdAndAttributeId(entityId,attributeId)){
-            throw new RelationEntityException("Данный атрибут не принадлижит этой сущности");
-        }
-        User owner = deviceRepository.findById(entityId).get().getUser();
-        if (!owner.equals(user)){
-            throw new AccessDeniedException("Доступ запрещен");
-        }
-        AttributeTemplate attributeTemplate = attributeRepository.findById(attributeId).get();
-        AttributeAmount attributeAmount = attributeAmountRepository
-                .findByEntityIdAndAttributeId(entityId,attributeId).get();
 
-        AttributeInfoResponse response = mapper
-                .AttributeTemplateAndAmountToAttributeInfoResponse(attributeTemplate, attributeAmount);
-        return response;
-    }
-    public List<AttributeTemplateInfoResponse> findAllAttributesTemplateByUserId(
-            Long userId
-    ) {
-        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
-        if (ObjectUtils.isEmpty(user) || !userRepository.existById(userId)){
-            throw new UserNotFoundException("Пользователь не найден");
+        long ownerAttributeId = attributeRepository
+                .findById(attributeId)
+                .orElseThrow(AttributeNotFoundException::new)
+                .getOwner()
+                .getId();
+
+        if (!userRepository.existById(ownerAttributeId)){
+            throw new UserNotFoundException();
         }
-        List<AttributeTemplate> templates = attributeRepository.findAllAttributeTemplateByOwner(userId);
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+        if (user.getId() != ownerAttributeId){
+            throw new AccessDeniedException("Access Denied");
+        }
+
+        long ownerDeviceId = deviceRepository
+                .findById(deviceId)
+                .orElseThrow(DeviceNotFoundException::new)
+                .getUser()
+                .getId();
+
+        if (!userRepository.existById(ownerDeviceId)){
+            throw new UserNotFoundException();
+        }
+        if (user.getId() != ownerDeviceId){
+            throw new AccessDeniedException("Access Denied");
+        }
+
+        AttributeAmount attributeAmount = attributeAmountRepository
+                .findByDeviceIdAndAttributeId(deviceId,attributeId)
+                .orElseThrow(RelationDeviceException::new);
+
+        return mapper
+                .AttributeAmountToAttributeInfoResponse(
+                        attributeAmount
+                );
+    }
+    @Transactional
+    public List<AttributeTemplateInfoResponse> findAllAttributesTemplateByUserId() {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+        if (ObjectUtils.isEmpty(user)){
+            throw new UserNotFoundException();
+        }
+        List<AttributeTemplate> templates = attributeRepository
+                .findAllAttributesByOwnerIdAndIsPrivateFalse(
+                        user.getId()
+                );
         return templates.stream()
                 .map(mapper::AttributeTemplateToAttributeTemplateInfoResponse)
                 .collect(Collectors.toList());
 
     }
-    public List<AttributeInfoResponse> findAllAttributesByEntityId(
-            Long entityId
-    ) throws AccessDeniedException {
+    @Transactional
+    public List<AttributeInfoResponse> findAllAttributesByDeviceId(
+            Long deviceId
+    ){
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
         if (ObjectUtils.isEmpty(user)){
-            throw new UserNotFoundException("Пользователь не найден");
+            throw new UserNotFoundException();
         }
-        if (!deviceRepository.existById(entityId)){
-            throw new EntityNotFoundException("Сущность не найдена");
-        }
-        User owner = deviceRepository.findById(entityId).get().getUser();
+
+        User owner = deviceRepository
+                .findById(deviceId)
+                .orElseThrow(DeviceNotFoundException::new)
+                .getUser();
+
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
         if (!owner.equals(user)){
-            throw new AccessDeniedException("Доступ запрещен");
+            throw new AccessDeniedException("Access Denied");
         }
-        List<AttributeTemplate> templates = attributeRepository.findAllByEntityId(entityId);
-        List<AttributeAmount> relations = attributeAmountRepository.findAllByEntityId(entityId);
-        List<AttributeInfoResponse> responses = new ArrayList<>();
-/*      По хорошему нужно переписать на Stream API
-        return  templates.stream()
-                .map(mapper.AttributeTemplateAndAmountToAttributeInfoResponse(());*/
-        for(AttributeTemplate template : templates){
-            for (AttributeAmount relation : relations){
-                if(template.getId().equals(relation.getAttributeId())){
-                    responses.add(mapper
-                            .AttributeTemplateAndAmountToAttributeInfoResponse(template, relation));
-                }
-            }
-        }
-        return  responses;
+        return mapper.AttributeAmountListToAttributeInfoResponseList(
+                attributeAmountRepository.findAllByDeviceId(deviceId)
+        );
     }
 }

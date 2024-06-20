@@ -5,6 +5,7 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.util.LinkedHashSet;
 import java.util.Set;
 
 
@@ -26,16 +27,13 @@ public class AttributeTemplate {
     @Column(name = "type")
     @Enumerated(EnumType.STRING)
     private AttributeType type;
+    @Enumerated(EnumType.STRING)
     @Column(name = "simulation_function")
-    private String simulationFunction;
-    @Column(name = "simulationType")
-    private SimulationTypes simulationType;
+    private SimulationFunctions simulationFunctions;
     @Column(name = "is_private")
     private Boolean isPrivate;
     @OneToMany(mappedBy = "attributeTemplate", orphanRemoval = true)
-    @ToString.Exclude
-    private Set<AttributeAmount> entities;
-    @ToString.Exclude
+    private Set<AttributeAmount> devices = new LinkedHashSet<>();
     @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id")
     private User owner;

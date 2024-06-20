@@ -1,7 +1,7 @@
 package com.IoTSim.management_server.context.attribute.api;
 
-import com.IoTSim.management_server.context.attribute.model.AttributeType;
-import com.IoTSim.management_server.context.attribute.model.SimulationTypes;
+import io.swagger.v3.oas.annotations.media.Schema;
+import jakarta.validation.constraints.NotNull;
 import lombok.*;
 
 @Data
@@ -9,14 +9,19 @@ import lombok.*;
 @RequiredArgsConstructor
 @Builder
 public class AttributeCreateRequest {
+    @NotNull
+    @Schema(description = "Идентификатор атрибута")
     private Long id;
-    @NonNull
-    private Long entityId;
-    @NonNull
-    private String name;
-    private String description = "";
-    private AttributeType type = AttributeType.STRING;
-    private String simulationFunction = "sin(x)";
-    private SimulationTypes simulationType = SimulationTypes.SIN;
-    private Long startingValue = 0L;
+    @NotNull
+    @Schema(description = "Идентификатор устройства")
+    private Long deviceId;
+    @NotNull
+    @Schema(description = "Идентификатор симуляции")
+    private Long simulationId;
+    @NotNull
+    @Schema(description = "Идентификатор пользователя")
+    private Long userId;
+    @NotNull
+    @Schema(description = "Начальное значение атрибута")
+    private Long startingValue;
 }

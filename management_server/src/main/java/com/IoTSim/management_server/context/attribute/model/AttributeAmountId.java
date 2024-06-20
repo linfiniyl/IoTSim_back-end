@@ -11,10 +11,13 @@ import java.io.Serializable;
 @Data
 @AllArgsConstructor
 @RequiredArgsConstructor
-@NoArgsConstructor
 public class AttributeAmountId implements Serializable {
-    private Long entityId;
+    private Long deviceId;
 
     private Long attributeId;
+
+    private Long simulationId;
+
+    private Long userId;
 
 }

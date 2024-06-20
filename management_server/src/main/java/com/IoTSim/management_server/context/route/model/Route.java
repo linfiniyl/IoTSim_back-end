@@ -1,6 +1,9 @@
 package com.IoTSim.management_server.context.route.model;
 
+import com.IoTSim.management_server.context.simulation.model.Simulation;
+import com.IoTSim.management_server.context.user.model.User;
 import jakarta.persistence.*;
+import lombok.*;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
@@ -14,6 +17,7 @@ import java.util.Set;
 @Setter
 @Getter
 @Entity
+@Builder
 @Table(name = "route")
 public class Route {
     @Id
@@ -21,8 +25,18 @@ public class Route {
     private Long id;
     @Column(name = "route_name")
     private String name;
+    @Column(name = "is_private")
+    private Boolean isPrivate;
 
     @OneToMany(mappedBy = "route", orphanRemoval = true)
     private Set<RoutePoint> routePoints = new LinkedHashSet<>();
+
+
+    @ManyToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "owner_id")
+    private User owner;
+
+    @OneToMany(mappedBy = "route", cascade = CascadeType.ALL)
+    private Set<Simulation> simulations = new LinkedHashSet<>();
 
 }

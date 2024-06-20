@@ -1,13 +1,15 @@
 package com.IoTSim.management_server.api.exceptions;
 
+
 import lombok.AllArgsConstructor;
 import lombok.Data;
-import lombok.RequiredArgsConstructor;
+import lombok.NoArgsConstructor;
 
 @Data
-@RequiredArgsConstructor
 @AllArgsConstructor
+@NoArgsConstructor
 public class ErrorMessage {
 
-    private String message;
+    private String errorMessage;
+
 }

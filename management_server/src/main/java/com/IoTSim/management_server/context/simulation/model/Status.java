@@ -5,5 +5,7 @@ public enum Status {
     STOPPED,
     ERROR,
     STARTING,
-    NOT_RUNNING;
+    RESTARTING,
+    NOT_RUNNING,
+    WARNING;
 }

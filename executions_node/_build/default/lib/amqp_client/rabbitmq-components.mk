@@ -37,8 +37,8 @@ dep_rabbit_common                     = hex $(PROJECT_VERSION)
 
 # Third-party dependencies version pinning.
 dep_accept = hex 0.3.5
-dep_cowboy = hex 2.10.0
-dep_cowlib = hex 2.12.1
+dep_cowboy = hex 2.12.0
+dep_cowlib = hex 2.13.0
 dep_credentials_obfuscation = hex 3.4.0
 dep_prometheus = hex 4.11.0
 dep_ra = hex 2.6.3

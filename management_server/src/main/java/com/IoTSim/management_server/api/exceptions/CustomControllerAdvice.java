@@ -4,48 +4,34 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.ResponseStatus;
 
 import java.nio.file.AccessDeniedException;
 
 @ControllerAdvice
 public class CustomControllerAdvice {
-    @ExceptionHandler(UserNotFoundException.class)
-    public ResponseEntity<ErrorMessage> userNotFoundExceptionHandler(UserNotFoundException exception){
+    @ResponseStatus(HttpStatus.NOT_FOUND)
+    @ExceptionHandler(value
+            = {UserNotFoundException.class, AttributeNotFoundException.class,
+            RelationDeviceException.class, DeviceNotFoundException.class,
+            SimulationNotFoundException.class, RouteNotFoundException.class})
+    public ResponseEntity<ErrorMessage> notFoundExceptionHandler(RuntimeException exception){
         return ResponseEntity
                 .status(HttpStatus.NOT_FOUND)
                 .body(new ErrorMessage(exception.getMessage()));
     }
 
-    @ExceptionHandler(AttributeNotFoundException.class)
-    public ResponseEntity<ErrorMessage> attributeNotFoundExceptionHandler(AttributeNotFoundException exception){
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(new ErrorMessage(exception.getMessage()));
-    }
-
-    @ExceptionHandler(RelationEntityException.class)
-    public ResponseEntity<ErrorMessage> relationEntityExceptionHandler(RelationEntityException exception){
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(new ErrorMessage(exception.getMessage()));
-    }
-
-    @ExceptionHandler(EntityNotFoundException.class)
-    public ResponseEntity<ErrorMessage> entityNotFoundExceptionHandler(EntityNotFoundException exception){
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(new ErrorMessage(exception.getMessage()));
-    }
-
-    @ExceptionHandler(SimulationNotFoundException.class)
-    public ResponseEntity<ErrorMessage> simulationNotFoundExceptionHandler(SimulationNotFoundException exception){
-        return ResponseEntity
-                .status(HttpStatus.NOT_FOUND)
-                .body(new ErrorMessage(exception.getMessage()));
-    }
-
+    @ResponseStatus(HttpStatus.FORBIDDEN)
     @ExceptionHandler(AccessDeniedException.class)
     public ResponseEntity<ErrorMessage> accessDeniedExceptionHandler(AccessDeniedException exception){
+        return ResponseEntity
+                .status(HttpStatus.FORBIDDEN)
+                .body(new ErrorMessage(exception.getMessage()));
+    }
+
+    @ResponseStatus(HttpStatus.INTERNAL_SERVER_ERROR)
+    @ExceptionHandler(NullPointerException.class)
+    public ResponseEntity<ErrorMessage> nullPointerExceptionHandler(NullPointerException exception){
         return ResponseEntity
                 .status(HttpStatus.FORBIDDEN)
                 .body(new ErrorMessage(exception.getMessage()));

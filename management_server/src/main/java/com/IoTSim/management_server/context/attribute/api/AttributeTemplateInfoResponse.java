@@ -1,8 +1,9 @@
 package com.IoTSim.management_server.context.attribute.api;
 
 import com.IoTSim.management_server.context.attribute.model.AttributeType;
-import com.IoTSim.management_server.context.attribute.model.SimulationTypes;
+import com.IoTSim.management_server.context.attribute.model.SimulationFunctions;
 import com.IoTSim.management_server.context.user.model.User;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,12 +14,16 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Builder
 public class AttributeTemplateInfoResponse {
-
+    @Schema(description = "Идентификатор атрибута")
     private Long id;
+    @Schema(description = "Название шаблона атрибута")
     private String name;
+    @Schema(description = "Описание шаблона атрибута")
     private String description;
+    @Schema(description = "Тип атрибута")
     private AttributeType type;
-    private String simulationFunction;
-    private SimulationTypes simulationType;
-    private User owner;
+    @Schema(description = "Функция симуляции")
+    private SimulationFunctions simulationFunctions;
+    @Schema(description = "Приватность шаблона атрибута")
+    private Boolean isPrivate;
 }

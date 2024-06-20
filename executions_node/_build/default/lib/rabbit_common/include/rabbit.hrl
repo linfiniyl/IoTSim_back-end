@@ -2,7 +2,7 @@
 %% License, v. 2.0. If a copy of the MPL was not distributed with this
 %% file, You can obtain one at https://mozilla.org/MPL/2.0/.
 %%
-%% Copyright (c) 2020-2023 VMware, Inc. or its affiliates.  All rights reserved.
+%% Copyright (c) 2007-2024 Broadcom. All Rights Reserved. The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries. All rights reserved.
 %%
 
 -include("resource.hrl").
@@ -121,7 +121,7 @@
         {mandatory,  %% Whether the message was published as mandatory
          confirm,    %% Whether the message needs confirming
          sender,     %% The pid of the process that created the delivery
-         message,    %% The #basic_message record
+         message,    %% The message container
          msg_seq_no, %% Msg Sequence Number from the channel publish_seqno field
          flow}).     %% Should flow control be used for this delivery
 
@@ -210,7 +210,7 @@
         }).
 %%----------------------------------------------------------------------------
 
--define(COPYRIGHT_MESSAGE, "Copyright (c) 2007-2023 Broadcom Inc and/or its subsidiaries").
+-define(COPYRIGHT_MESSAGE, "Copyright (c) 2007-2024 Broadcom Inc and/or its subsidiaries").
 -define(INFORMATION_MESSAGE, "Licensed under the MPL 2.0. Website: https://rabbitmq.com").
 
 %% EMPTY_FRAME_SIZE, 8 = 1 + 2 + 4 + 1

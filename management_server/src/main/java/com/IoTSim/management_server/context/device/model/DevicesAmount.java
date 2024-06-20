@@ -2,10 +2,7 @@ package com.IoTSim.management_server.context.device.model;
 
 import com.IoTSim.management_server.context.simulation.model.Simulation;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 import org.hibernate.annotations.OnDelete;
 import org.hibernate.annotations.OnDeleteAction;
 
@@ -14,6 +11,7 @@ import org.hibernate.annotations.OnDeleteAction;
 @Getter
 @Setter
 @Entity
+@Builder
 @Table(name = "devices_amount")
 @IdClass(DevicesAmountId.class)
 public class DevicesAmount {
@@ -28,16 +26,12 @@ public class DevicesAmount {
     @Column(name = "amount_entities")
     private Long amount;
 
-    @ManyToOne
-    @OnDelete(action = OnDeleteAction.CASCADE)
-    @JoinColumns({
-            @JoinColumn(name = "user_id", referencedColumnName = "user_id"),
-            @JoinColumn(name = "simulation_id", referencedColumnName = "id")
-    })
+    @MapsId("simulationId")
+    @ManyToOne(cascade = {CascadeType.ALL})
+    @JoinColumn(name = "simulation_id", referencedColumnName = "id")
     private Simulation simulation;
-
-    @ManyToOne
-    @OnDelete(action = OnDeleteAction.CASCADE)
+    @MapsId("deviceId")
+    @ManyToOne(cascade = {CascadeType.ALL})
     @JoinColumn(name = "device_id", referencedColumnName = "id")
     private Device device;
 

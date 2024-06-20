@@ -1,8 +1,9 @@
 package com.IoTSim.management_server.context.attribute.api;
 
 import com.IoTSim.management_server.context.attribute.model.AttributeType;
-import com.IoTSim.management_server.context.attribute.model.SimulationTypes;
+import com.IoTSim.management_server.context.attribute.model.SimulationFunctions;
 import com.IoTSim.management_server.context.user.model.User;
+import io.swagger.v3.oas.annotations.media.Schema;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Data;
@@ -13,14 +14,12 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 @Builder
 public class AttributeInfoResponse {
-
-    private Long id;
-    private Long entityId;
-    private String name;
-    private String description;
-    private AttributeType type;
-    private String simulationFunction;
-    private SimulationTypes simulationType;
+    @Schema(description = "Идентификатор устройства")
+    private Long deviceId;
+    @Schema(description = "Идентификатор атрибута")
+    private Long attributeId;
+    @Schema(description = "Идентификатор симуляции")
+    private Long simulationId;
+    @Schema(description = "Начальное значение")
     private Long startingValue;
-    private User owner;
 }

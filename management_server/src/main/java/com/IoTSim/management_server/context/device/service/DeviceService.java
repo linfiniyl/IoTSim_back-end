@@ -1,50 +1,138 @@
 package com.IoTSim.management_server.context.device.service;
 
-
+import com.IoTSim.management_server.api.exceptions.DeviceNotFoundException;
+import com.IoTSim.management_server.api.exceptions.UserNotFoundException;
+import com.IoTSim.management_server.context.device.api.DeviceCreateRequest;
+import com.IoTSim.management_server.context.device.api.DeviceInfoResponse;
+import com.IoTSim.management_server.context.device.dto.DeviceDto;
+import com.IoTSim.management_server.context.device.mapper.DeviceMapper;
 import com.IoTSim.management_server.context.device.model.Device;
 import com.IoTSim.management_server.context.device.repository.DeviceRepository;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.IoTSim.management_server.context.user.model.User;
+import com.IoTSim.management_server.context.user.repository.UserRepository;
+import lombok.RequiredArgsConstructor;
+import org.springframework.security.access.AccessDeniedException;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+import org.springframework.util.ObjectUtils;
 
 import java.util.List;
-import java.util.Optional;
+import java.util.Objects;
 
 @Service
+@RequiredArgsConstructor
 public class DeviceService {
-    @Autowired
-    private DeviceRepository deviceRepository;
 
-    public void createEntity(Device entity) {
-        deviceRepository.save(entity);
-    }
+    private final DeviceRepository deviceRepository;
+    private final UserRepository userRepository;
+    private final DeviceMapper mapper;
 
-    public Device update(Device entity, Long entityId) {
-        Optional<Device> optionalEntity = deviceRepository.findById(entityId);
-        if (optionalEntity.isPresent()){
-            Device existingEntity = optionalEntity.get();
-            existingEntity.setName(entity.getName());
-            existingEntity.setAttibutes(entity.getAttibutes());
-            existingEntity.setDescription(entity.getDescription());
-            existingEntity.setPicture(entity.getPicture());
-            return deviceRepository.save(existingEntity);
-        } else {
-            return null;
+    @Transactional
+    public DeviceDto createDevice(
+            DeviceCreateRequest request
+    ) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (ObjectUtils.isEmpty(user)){
+            throw new UserNotFoundException();
         }
+
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+        Device device = Device
+                .builder()
+                .name(request.getName())
+                .description(request.getDescription())
+                .picture(request.getPicture())
+                .isPrivate(request.getIsPrivate())
+                .user(user)
+                .build();
+        return mapper.deviceToDeviceDto(deviceRepository.saveAndFlush(device));
     }
 
-    public void deleteById(Long id) {
-        deviceRepository.deleteById(id);
+    @Transactional
+    public void updateDevice(
+            DeviceDto deviceDto
+    ) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (ObjectUtils.isEmpty(user)){
+            throw new UserNotFoundException();
+        }
+        Long ownerId = deviceDto.getUserId();
+        if (!userRepository.existById(ownerId)){
+            throw new UserNotFoundException();
+        }
+        if (!deviceRepository.existById(deviceDto.getId())){
+            throw new DeviceNotFoundException();
+        }
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+        if (!Objects.equals(user.getId(), ownerId)){
+            throw new AccessDeniedException("Access Denied");
+        }
+
+        deviceRepository.save(
+                mapper.deviceDtoToDevice(deviceDto)
+        );
+    }
+    @Transactional
+    public void deleteById(
+            Long deviceId
+    ) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (ObjectUtils.isEmpty(user)){
+            throw new UserNotFoundException();
+        }
+
+        User owner = deviceRepository
+                .findById(deviceId)
+                .orElseThrow(DeviceNotFoundException::new)
+                .getUser();
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+        if (!Objects.equals(user.getId(), owner.getId())){
+            throw new AccessDeniedException("Access Denied");
+        }
+        deviceRepository.deleteById(deviceId);
     }
 
-    public Optional<Device> findById(Long id) {
-       return deviceRepository.findById(id);
+    @Transactional
+    public DeviceInfoResponse findById(
+            Long deviceId
+    ) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (ObjectUtils.isEmpty(user)){
+            throw new UserNotFoundException();
+        }
+
+        Device device = deviceRepository.findById(deviceId).orElseThrow(DeviceNotFoundException::new);
+        User owner = device.getUser();
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+        if (!Objects.equals(user.getId(), owner.getId())){
+            throw new AccessDeniedException("Access Denied");
+        }
+       return mapper.deviceToDeviceInfoResponse(device);
     }
 
-    public List<Device> findAll() {
-        return deviceRepository.findAll();
+    public List<DeviceInfoResponse> findAllDevices() {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (ObjectUtils.isEmpty(user)){
+            throw new UserNotFoundException();
+        }
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+        return mapper.deviceListToDeviceInfoResponseList(
+                deviceRepository.findByIsPrivateFalseAndUser(user)
+        );
     }
 
-    public long count() {
-        return deviceRepository.count();
+    public Long count() {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (ObjectUtils.isEmpty(user)){
+            throw new UserNotFoundException();
+        }
+        return deviceRepository.countByIsPrivateFalseAndUser(user);
     }
 }

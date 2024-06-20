@@ -2,7 +2,7 @@
 %% License, v. 2.0. If a copy of the MPL was not distributed with this
 %% file, You can obtain one at https://mozilla.org/MPL/2.0/.
 %%
-%% Copyright (c) 2007-2024 Broadcom. All Rights Reserved. The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries.  All rights reserved.
+%% Copyright (c) 2007-2024 Broadcom. All Rights Reserved. The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries. All rights reserved.
 %%
 
 -module(rabbit_misc).
@@ -10,7 +10,6 @@
 -ignore_xref([{maps, get, 2}]).
 
 -include("rabbit.hrl").
--include("rabbit_framing.hrl").
 -include("rabbit_misc.hrl").
 
 -include_lib("kernel/include/file.hrl").
@@ -43,7 +42,7 @@
          pid_change_node/2, node_to_fake_pid/1]).
 -export([hexify/1]).
 -export([version_compare/2, version_compare/3]).
--export([version_minor_equivalent/2, strict_version_minor_equivalent/2]).
+-export([strict_version_minor_equivalent/2]).
 -export([dict_cons/3, orddict_cons/3, maps_cons/3, gb_trees_cons/3]).
 -export([gb_trees_fold/3, gb_trees_foreach/2]).
 -export([all_module_attributes/1,
@@ -80,9 +79,14 @@
 -export([raw_read_file/1]).
 -export([find_child/2]).
 -export([is_regular_file/1]).
--export([maps_any/2]).
 -export([safe_ets_update_counter/3, safe_ets_update_counter/4, safe_ets_update_counter/5,
          safe_ets_update_element/3, safe_ets_update_element/4, safe_ets_update_element/5]).
+-export([is_even/1, is_odd/1]).
+
+-export([maps_any/2,
+         maps_put_truthy/3,
+         maps_put_falsy/3
+        ]).
 -export([remote_sup_child/2]).
 
 %% Horrible macro to use in guards
@@ -140,7 +144,7 @@
         (any(), any(), rabbit_types:r(any()), atom() | binary()) ->
             rabbit_types:connection_exit().
 -spec table_lookup(rabbit_framing:amqp_table(), binary()) ->
-          'undefined' | {rabbit_framing:amqp_field_type(), any()}.
+    'undefined' | {rabbit_framing:amqp_field_type(), rabbit_framing:amqp_value()}.
 -spec set_table_value
         (rabbit_framing:amqp_table(), binary(), rabbit_framing:amqp_field_type(),
          rabbit_framing:amqp_value()) ->
@@ -192,7 +196,6 @@
 -spec version_compare
         (rabbit_semver:version_string(), rabbit_semver:version_string(),
          ('lt' | 'lte' | 'eq' | 'gte' | 'gt')) -> boolean().
--spec version_minor_equivalent(rabbit_semver:version_string(), rabbit_semver:version_string()) -> boolean().
 -spec dict_cons(any(), any(), dict:dict()) -> dict:dict().
 -spec orddict_cons(any(), any(), orddict:orddict()) -> orddict:orddict().
 -spec gb_trees_cons(any(), any(), gb_trees:tree()) -> gb_trees:tree().
@@ -361,8 +364,8 @@ val(Value) ->
 
 table_lookup(Table, Key) ->
     case lists:keysearch(Key, 1, Table) of
-        {value, {_, TypeBin, ValueBin}} -> {TypeBin, ValueBin};
-        false                           -> undefined
+        {value, {_, Type, Value}} -> {Type, Value};
+        false -> undefined
     end.
 
 set_table_value(Table, Key, Type, Value) ->
@@ -728,60 +731,15 @@ version_compare(A, B) ->
                  end
     end.
 
-%% For versions starting from 3.7.x:
-%% Versions are considered compatible (except for special cases; see
-%% below). The feature flags will determine if they are actually
-%% compatible.
-%%
-%% For versions up-to 3.7.x:
-%% a.b.c and a.b.d match, but a.b.c and a.d.e don't. If
-%% versions do not match that pattern, just compare them.
-%%
-%% Special case for 3.6.6 because it introduced a change to the schema.
-%% e.g. 3.6.6 is not compatible with 3.6.5
-%% This special case can be removed once 3.6.x reaches EOL
-version_minor_equivalent(A, B) ->
-    {{MajA, MinA, PatchA, _}, _} = rabbit_semver:normalize(rabbit_semver:parse(A)),
-    {{MajB, MinB, PatchB, _}, _} = rabbit_semver:normalize(rabbit_semver:parse(B)),
-
-    case {MajA, MinA, MajB, MinB} of
-        {3, 6, 3, 6} ->
-            if
-                PatchA >= 6 -> PatchB >= 6;
-                PatchA < 6  -> PatchB < 6;
-                true -> false
-            end;
-        _
-          when (MajA < 3 orelse (MajA =:= 3 andalso MinA =< 6))
-               orelse
-               (MajB < 3 orelse (MajB =:= 3 andalso MinB =< 6)) ->
-            MajA =:= MajB andalso MinA =:= MinB;
-        _ ->
-            %% Starting with RabbitMQ 3.7.x, we consider this
-            %% minor release series and all subsequent series to
-            %% be possibly compatible, based on just the version.
-            %% The real compatibility check is deferred to the
-            %% rabbit_feature_flags module in rabbitmq-server.
-            true
-    end.
-
-%% This is the same as above except that e.g. 3.7.x and 3.8.x are
-%% considered incompatible (as if there were no feature flags). This is
-%% useful to check plugin compatibility (`broker_versions_requirement`
-%% field in plugins).
+%% The function below considers that e.g. 3.7.x and 3.8.x are incompatible (as
+%% if there were no feature flags). This is useful to check plugin
+%% compatibility (`broker_versions_requirement` field in plugins).
 
 strict_version_minor_equivalent(A, B) ->
-    {{MajA, MinA, PatchA, _}, _} = rabbit_semver:normalize(rabbit_semver:parse(A)),
-    {{MajB, MinB, PatchB, _}, _} = rabbit_semver:normalize(rabbit_semver:parse(B)),
+    {{MajA, MinA, _PatchA, _}, _} = rabbit_semver:normalize(rabbit_semver:parse(A)),
+    {{MajB, MinB, _PatchB, _}, _} = rabbit_semver:normalize(rabbit_semver:parse(B)),
 
-    case {MajA, MinA, MajB, MinB} of
-        {3, 6, 3, 6} -> if
-                            PatchA >= 6 -> PatchB >= 6;
-                            PatchA < 6  -> PatchB < 6;
-                            true -> false
-                        end;
-        _            -> MajA =:= MajB andalso MinA =:= MinB
-    end.
+    MajA =:= MajB andalso MinA =:= MinB.
 
 dict_cons(Key, Value, Dict) ->
     dict:update(Key, fun (List) -> [Value | List] end, [Value], Dict).
@@ -893,7 +851,7 @@ ntoab(IP) ->
 %% loop in rabbit_amqqueue:on_node_down/1 and any delays we incur
 %% would be bad news.
 %%
-%% See also rabbit_mnesia:is_process_alive/1 which also requires the
+%% See also rabbit_process:is_process_alive/1 which also requires the
 %% process be in the same running cluster as us (i.e. not partitioned
 %% or some random node).
 is_process_alive(Pid) when node(Pid) =:= node() ->
@@ -1141,8 +1099,8 @@ rabbitmq_and_erlang_versions() ->
 which_applications() ->
     try
         application:which_applications(10000)
-    catch
-        exit:{timeout, _} -> []
+    catch _:_:_Stacktrace ->
+        []
     end.
 
 sequence_error([T])                      -> T;
@@ -1614,22 +1572,47 @@ find_powershell() ->
 %% Returns true if Pred(Key, Value) returns true for at least one Key to Value association in Map.
 %% The Pred function must return a boolean.
 -spec maps_any(Pred, Map) -> boolean() when
-    Pred :: fun((Key, Value) -> boolean()),
-    Map :: #{Key => Value}.
+      Pred :: fun((Key, Value) -> boolean()),
+      Map :: #{Key => Value}.
 maps_any(Pred, Map)
-when is_function(Pred, 2) andalso is_map(Map) ->
-  I = maps:iterator(Map),
-  maps_any_1(Pred, maps:next(I)).
+  when is_function(Pred, 2) andalso is_map(Map) ->
+    I = maps:iterator(Map),
+    maps_any_1(Pred, maps:next(I)).
 
 maps_any_1(_Pred, none) ->
-  false;
+    false;
 maps_any_1(Pred, {K, V, I}) ->
-  case Pred(K, V) of
-      true ->
-          true;
-      false ->
-          maps_any_1(Pred, maps:next(I))
-  end.
+    case Pred(K, V) of
+        true ->
+            true;
+        false ->
+            maps_any_1(Pred, maps:next(I))
+    end.
+
+-spec is_even(integer()) -> boolean().
+is_even(N) ->
+    (N band 1) =:= 0.
+-spec is_odd(integer()) -> boolean().
+is_odd(N) ->
+    (N band 1) =:= 1.
+
+-spec maps_put_truthy(Key, Value, Map) -> Map when
+      Map :: #{Key => Value}.
+maps_put_truthy(_K, undefined, M) ->
+    M;
+maps_put_truthy(_K, false, M) ->
+    M;
+maps_put_truthy(K, V, M) ->
+    maps:put(K, V, M).
+
+-spec maps_put_falsy(Key, Value, Map) -> Map when
+      Map :: #{Key => Value}.
+maps_put_falsy(K, undefined, M) ->
+    maps:put(K, undefined, M);
+maps_put_falsy(K, false, M) ->
+    maps:put(K, false, M);
+maps_put_falsy(_K, _V, M) ->
+    M.
 
 -spec remote_sup_child(node(), rabbit_types:sup_ref()) -> rabbit_types:ok_or_error2(rabbit_types:child(), no_child | no_sup).
 remote_sup_child(Node, Sup) ->

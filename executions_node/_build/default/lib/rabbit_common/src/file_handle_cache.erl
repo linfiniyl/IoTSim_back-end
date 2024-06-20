@@ -2,7 +2,7 @@
 %% License, v. 2.0. If a copy of the MPL was not distributed with this
 %% file, You can obtain one at https://mozilla.org/MPL/2.0/.
 %%
-%% Copyright (c) 2007-2024 Broadcom. All Rights Reserved. The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries.  All rights reserved.
+%% Copyright (c) 2007-2024 Broadcom. All Rights Reserved. The term “Broadcom” refers to Broadcom Inc. and/or its subsidiaries. All rights reserved.
 %%
 
 -module(file_handle_cache).
@@ -563,6 +563,7 @@ obtain()          -> obtain(1).
 set_reservation() -> set_reservation(1).
 release()         -> release(1).
 release_reservation() -> release_reservation(file).
+%% @todo This isn't used.
 transfer(Pid)     -> transfer(Pid, 1).
 
 obtain(Count)          -> obtain(Count, socket).

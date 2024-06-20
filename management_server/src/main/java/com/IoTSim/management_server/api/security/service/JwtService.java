@@ -15,7 +15,6 @@ import java.security.Key;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.Objects;
 import java.util.function.Function;
 
 @Service
@@ -30,13 +29,13 @@ public class JwtService {
         Map<String, Object> claims = new HashMap<>();
         if (userDetails instanceof User customUserDetails){
             claims.put("id", customUserDetails.getId());
-            claims.put("role", customUserDetails.getRole());
+            claims.put("role", customUserDetails.getRole().name());
         }
         return generateToken(claims, userDetails);
     }
 
     public boolean isTokenValid(String token, UserDetails userDetails){
-        final String username = extractUsername(token);
+        String username = extractUsername(token);
         return (username.equals(userDetails.getUsername()) && !isTokenExpired(token));
     }
 
@@ -72,7 +71,7 @@ public class JwtService {
                 .parser()
                 .setSigningKey(getSignInKey())
                 .build()
-                .parseClaimsJwt(token)
+                .parseClaimsJws(token)
                 .getBody();
     }
 

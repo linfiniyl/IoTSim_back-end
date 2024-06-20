@@ -9,20 +9,22 @@ import com.IoTSim.management_server.context.attribute.dto.AttributeTemplateDto;
 import com.IoTSim.management_server.context.attribute.model.AttributeAmount;
 import com.IoTSim.management_server.context.attribute.model.AttributeTemplate;
 import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
 
-@Mapper
+import java.util.List;
+
+@Mapper(componentModel = "spring")
 public interface AttributeMapper {
     AttributeTemplate AttributeTemplateDtoToAttributeTemplate(AttributeTemplateDto attributeTemplateDto);
-    AttributeTemplateDto AttributeTemplateToAttributeTemplateDto(AttributeTemplate attributeTemplate);
-    AttributeDto AttributeToAttributeDto(AttributeTemplate attributeTemplate, AttributeAmount attributeAmount);
     AttributeAmount AttributeDtoToAttributeAmount(AttributeDto attributeDto);
-    AttributeTemplate AttributeDtoToAttributeTemplate(AttributeDto attributeDto);
-    AttributeTemplate AttributeCreateRequestToAttributeTemplate(AttributeCreateRequest attributeCreateRequest);
+
     AttributeAmount AttributeCreateRequestToAttributeAmount(AttributeCreateRequest attributeCreateRequest);
     AttributeTemplate AttributeTemplateCreateRequestToAttributeTemplate(AttributeTemplateCreateRequest attributeCreateRequest);
-    AttributeAmount AttributeTemplateCreateRequestToAttributeAmount(AttributeTemplateCreateRequest attributeCreateRequest);
+
+    @Mapping(source = "simulationFunctions", target = "simulationFunctions")
     AttributeTemplateInfoResponse AttributeTemplateToAttributeTemplateInfoResponse(AttributeTemplate attributeTemplate);
-    AttributeInfoResponse AttributeTemplateAndAmountToAttributeInfoResponse(
-            AttributeTemplate attributeTemplate, AttributeAmount attributeAmount);
+
+    AttributeInfoResponse AttributeAmountToAttributeInfoResponse(AttributeAmount attributeAmount);
+    List<AttributeInfoResponse> AttributeAmountListToAttributeInfoResponseList(List<AttributeAmount> attributeAmounts);
 
 }

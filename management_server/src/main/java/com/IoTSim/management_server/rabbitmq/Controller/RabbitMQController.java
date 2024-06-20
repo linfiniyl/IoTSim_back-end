@@ -1,29 +1,46 @@
 package com.IoTSim.management_server.rabbitmq.Controller;
 
 
-import com.IoTSim.management_server.context.simulationprocess.service.SimulationService;
-import org.springframework.amqp.rabbit.core.RabbitTemplate;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.IoTSim.management_server.api.Endpoints;
+import com.IoTSim.management_server.rabbitmq.service.CommandServiceImp;
+import lombok.RequiredArgsConstructor;
+import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
-
+@RequiredArgsConstructor
 @RestController
-@RequestMapping("/start_simulation")
+@RequestMapping(Endpoints.SIMULATION_OPERATION)
 public class RabbitMQController {
 
-    @Autowired
-    private RabbitTemplate rabbitTemplate;
-    @Autowired
-    private SimulationService simulationService;
+    private final CommandServiceImp  commandService;
 
-    @PostMapping("/")
-    public String startSimulation(@RequestParam("userId") Long userId, @RequestParam("simulationId") Long simulationId,
-                                  @RequestParam("routingKey") String key){
-        if (simulationService.findById(userId, simulationId).isPresent()){
-            String message = new String(userId + " " + simulationId);
-            rabbitTemplate.convertAndSend(key, message);
-            return "Simulation with id - " + simulationId + " (User - " + userId + " ): Successfully Launched";
-        } else {
-            return "Simulation with id - " + simulationId + " (User - " + userId + " ): Not Found.";
-        }
+    @PostMapping(Endpoints.OPERATION_START)
+    public ResponseEntity<?> startSimulation(
+            @RequestParam("simulationId") Long simulationId
+    ){
+        commandService.startSimulation(simulationId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .build();
+    }
+
+    @PostMapping(Endpoints.OPERATION_STOP)
+    public ResponseEntity<?> stopSimulation(
+            @RequestParam("simulationId") Long simulationId
+    ){
+        commandService.stopSimulation(simulationId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .build();
+    }
+
+    @PostMapping(Endpoints.OPERATION_RESTART)
+    public ResponseEntity<?> restartSimulation(
+            @RequestParam("simulationId") Long simulationId
+    ){
+        commandService.restartSimulation(simulationId);
+        return ResponseEntity
+                .status(HttpStatus.OK)
+                .build();
     }
 }

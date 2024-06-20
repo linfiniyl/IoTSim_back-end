@@ -3,19 +3,18 @@ package com.IoTSim.management_server.context.device.model;
 import com.IoTSim.management_server.context.attribute.model.AttributeAmount;
 import com.IoTSim.management_server.context.user.model.User;
 import jakarta.persistence.*;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+import lombok.*;
 
 
+import java.util.HashSet;
 import java.util.Set;
 
 @AllArgsConstructor
 @NoArgsConstructor
 @Getter
 @Setter
-@jakarta.persistence.Entity
+@Entity
+@Builder
 @Table(name = "device")
 public class Device {
     @Id
@@ -30,11 +29,10 @@ public class Device {
     @Column(name = "is_private")
     private Boolean isPrivate;
 
-
     @OneToMany(mappedBy = "device" , orphanRemoval = true)
-    private Set<DevicesAmount> amount;
+    private Set<DevicesAmount> amount = new HashSet<>();
     @OneToMany(mappedBy = "device" , orphanRemoval = true)
-    private Set<AttributeAmount> attributes;
+    private Set<AttributeAmount> attributes = new HashSet<>();
 
     @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "user_id")
