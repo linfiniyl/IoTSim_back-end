@@ -18,7 +18,7 @@ import java.util.List;
 public class DevicesAmountController {
     private final DevicesAmountService devicesAmountService;
 
-    @GetMapping
+    @GetMapping(Endpoints.SIMULATION_RELATIONS_SIMULATION_ID)
     public ResponseEntity<List<DevicesAmountInfoResponse>> allRelations(
             @PathVariable Long simulationId
     ){
@@ -45,7 +45,7 @@ public class DevicesAmountController {
                 .status(HttpStatus.NO_CONTENT)
                 .build();
     }
-    @PutMapping(Endpoints.SIMULATION_RELATION_ID)
+    @PutMapping
     public ResponseEntity<?> updateRelation(
             @RequestBody DevicesAmountDto devicesAmountDto
     ){

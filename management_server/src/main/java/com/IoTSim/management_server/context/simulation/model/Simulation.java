@@ -19,10 +19,10 @@ import java.util.Set;
 @Table(name = "simulation")
 public class Simulation {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
-    @Column(name = "name")
+    @Column(name = "name", nullable = false)
     private String name;
     @Enumerated(EnumType.STRING)
     @Column(name = "status", nullable = false)
@@ -32,7 +32,7 @@ public class Simulation {
     @OneToMany(mappedBy = "simulation", orphanRemoval = true)
     private Set<DevicesAmount> amount = new LinkedHashSet<>();
     @ManyToOne
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @ManyToOne

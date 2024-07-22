@@ -57,7 +57,7 @@ public class AttributeController {
                 .build();
     }
 
-    @PutMapping(Endpoints.ATTRIBUTE_TEMPLATE_ID)
+    @PutMapping
     public ResponseEntity<?> updateAttributeTemplate(
             @RequestBody AttributeTemplateDto attributeTemplateDto
     ){

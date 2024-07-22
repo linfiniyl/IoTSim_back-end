@@ -15,6 +15,7 @@ import com.IoTSim.management_server.context.device.repository.DevicesAmountRepos
 import com.IoTSim.management_server.context.simulation.model.Simulation;
 import com.IoTSim.management_server.context.simulation.repository.SimulationRepository;
 import com.IoTSim.management_server.context.user.model.User;
+import com.IoTSim.management_server.context.user.repository.UserRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.security.access.AccessDeniedException;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -34,6 +35,8 @@ public class DevicesAmountService {
     private final DeviceRepository deviceRepository;
     private final DeviceMapper mapper;
 
+    private final UserRepository userRepository;
+
     @Transactional
     public List<DevicesAmountInfoResponse> findAllRelationsBySimulationId(
             Long simulationId
@@ -43,10 +46,8 @@ public class DevicesAmountService {
         if (ObjectUtils.isEmpty(user)){
             throw new UserNotFoundException();
         }
-        if (!simulationRepository.existsById(simulationId)){
-            throw new SimulationNotFoundException();
-        }
-        Simulation simulation = simulationRepository.findById(simulationId).get();
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+        Simulation simulation = simulationRepository.findById(simulationId).orElseThrow(SimulationNotFoundException::new);
         if (!Objects.equals(user.getId(), simulation.getUser().getId()) && simulation.getIsPrivate()){
             throw new AccessDeniedException("Access Denied");
         }
@@ -65,21 +66,19 @@ public class DevicesAmountService {
         if (ObjectUtils.isEmpty(user)){
             throw new UserNotFoundException();
         }
-        if (!devicesAmountRepository.existsBySimulationIdAndDeviceId(simulationId, deviceId)){
-            throw new RelationDeviceException();
-        }
-        if (!simulationRepository.existsById(simulationId)){
-            throw new SimulationNotFoundException();
-        }
-        if (!deviceRepository.existById(deviceId)){
-            throw new DeviceNotFoundException();
-        }
-        Simulation simulation = simulationRepository.findById(simulationId).get();
-        if (!Objects.equals(user.getId(), simulation.getUser().getId()) && simulation.getIsPrivate()){
+
+        Simulation simulation = simulationRepository.findById(simulationId).orElseThrow(SimulationNotFoundException::new);
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+
+        Device device = deviceRepository.findById(deviceId).orElseThrow(DeviceNotFoundException::new);
+        if (!Objects.equals(user.getId(), simulation.getUser().getId()) && simulation.getIsPrivate()
+                || !Objects.equals(user.getId(), device.getUser().getId()) && device.getIsPrivate()
+        ){
             throw new AccessDeniedException("Access Denied");
         }
         return mapper.devicesAmountToDevicesAmountInfoResponse(
-                devicesAmountRepository.findAmountById(simulationId, deviceId).get()
+                devicesAmountRepository.findAmountById(simulationId, deviceId)
+                        .orElseThrow(RelationDeviceException::new)
         );
     }
 
@@ -92,14 +91,17 @@ public class DevicesAmountService {
         if (ObjectUtils.isEmpty(user)){
             throw new UserNotFoundException();
         }
-        if (!simulationRepository.existsById(request.getSimulationId())){
-            throw new SimulationNotFoundException();
-        }
-        if (!deviceRepository.existById(request.getDeviceId())){
-            throw new DeviceNotFoundException();
-        }
-        Simulation simulation = simulationRepository.findById(request.getSimulationId()).get();
-        if (!Objects.equals(user.getId(), simulation.getUser().getId())){
+        Simulation simulation = simulationRepository
+                .findById(request.getSimulationId())
+                .orElseThrow(SimulationNotFoundException::new);
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+
+        Device device = deviceRepository
+                .findById(request.getDeviceId())
+                .orElseThrow(DeviceNotFoundException::new);
+        if (!Objects.equals(user.getId(), simulation.getUser().getId()) && simulation.getIsPrivate()
+                || !Objects.equals(user.getId(), device.getUser().getId()) && device.getIsPrivate()
+        ){
             throw new AccessDeniedException("Access Denied");
         }
         DevicesAmount amount = DevicesAmount
@@ -126,16 +128,17 @@ public class DevicesAmountService {
         if (!devicesAmountRepository.existsBySimulationIdAndDeviceId(simulationId, deviceId)){
             throw new RelationDeviceException();
         }
-        if (!simulationRepository.existsById(simulationId)){
-            throw new SimulationNotFoundException();
-        }
-        if (!deviceRepository.existById(deviceId)){
-            throw new DeviceNotFoundException();
-        }
-        Simulation simulation = simulationRepository.findById(simulationId).get();
-        Device device = deviceRepository.findById(deviceId).get();
-        if ((!Objects.equals(user.getId(), simulation.getUser().getId()) && simulation.getIsPrivate()) ||
-                (!Objects.equals(device.getUser().getId(), user.getId()) && device.getIsPrivate())){
+        Simulation simulation = simulationRepository
+                .findById(simulationId)
+                .orElseThrow(SimulationNotFoundException::new);
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+
+        Device device = deviceRepository
+                .findById(deviceId)
+                .orElseThrow(DeviceNotFoundException::new);
+        if (!Objects.equals(user.getId(), simulation.getUser().getId()) && simulation.getIsPrivate()
+                || !Objects.equals(user.getId(), device.getUser().getId()) && device.getIsPrivate()
+        ){
             throw new AccessDeniedException("Access Denied");
         }
         devicesAmountRepository.deleteDevicesAmountById(simulationId, deviceId);
@@ -155,24 +158,17 @@ public class DevicesAmountService {
         ){
             throw new RelationDeviceException();
         }
-        if (!simulationRepository.existsById(
-                devicesAmountDto.getSimulationId()
-        )){
-            throw new SimulationNotFoundException();
-        }
-        if (!deviceRepository.existById(
-                devicesAmountDto.getDeviceId()
-        )){
-            throw new DeviceNotFoundException();
-        }
         Simulation simulation = simulationRepository
                 .findById(devicesAmountDto.getSimulationId())
-                .get();
+                .orElseThrow(SimulationNotFoundException::new);
+        user = userRepository.findByEmail(user.getEmail()).orElseThrow(UserNotFoundException::new);
+
         Device device = deviceRepository
                 .findById(devicesAmountDto.getDeviceId())
-                .get();
-        if ((user.getId() != simulation.getUser().getId() && simulation.getIsPrivate()) ||
-                (!Objects.equals(device.getUser().getId(), user.getId()) && device.getIsPrivate())){
+                .orElseThrow(DeviceNotFoundException::new);
+        if (!Objects.equals(user.getId(), simulation.getUser().getId()) && simulation.getIsPrivate()
+                || !Objects.equals(user.getId(), device.getUser().getId()) && device.getIsPrivate()
+        ){
             throw new AccessDeniedException("Access Denied");
         }
 

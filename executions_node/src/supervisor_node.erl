@@ -24,11 +24,16 @@ init(Args) ->
   } = Args,
 
   Children = [#{
-    start => {worker, start, [get_element(Index, UUID), Arguments_of_functions, Route, self()]},
+    id => {child_process, Index},
+    start => {
+        worker,
+        start_link, [get_element(Index, UUID),
+        Arguments_of_functions, Route]
+    },
     restart => transient,
     shutdown => 2000,
     type => worker,
-    modules => [Module_name],
+    modules => [erlang:binary_to_atom(Module_name)],
     monitor => {process, true}}
     || Index <- lists:seq(1, length(UUID))],
 
@@ -36,7 +41,7 @@ init(Args) ->
   {ok, {#{strategy => one_for_one,
     intensity => 5,
     period => 30},
-    [Children]}
+    Children}
   }.
 
 pause() ->

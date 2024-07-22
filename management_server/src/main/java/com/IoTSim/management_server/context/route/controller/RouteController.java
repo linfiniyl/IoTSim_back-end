@@ -43,7 +43,7 @@ public class RouteController {
                 .status(HttpStatus.CREATED)
                 .body(routeService.createRoute(request));
     }
-    @PutMapping(Endpoints.ROUTE_ID)
+    @PutMapping
     public ResponseEntity<?> updateRoute(
             @RequestBody RouteDto routeDto
     ) {

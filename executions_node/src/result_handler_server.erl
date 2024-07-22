@@ -55,7 +55,7 @@ handle_call(_Request, _From, State = #result_handler_server_state{}) ->
   {reply, ok, State}.
 
 handle_cast({calculation, Result}, State = #result_handler_server_state{}) ->
-  rabbit_send_response({calculation, Result}, State#result_handler_server_state.rabbit_channel),
+  rabbit_send_response(State#result_handler_server_state.rabbit_channel, {calculation, Result}),
   {noreply, State};
 
 handle_cast(_Request, State = #result_handler_server_state{}) ->
@@ -85,13 +85,17 @@ rabbitmq_config() ->
 
 rabbit_send_response(Channel ,Response) ->
   %% Connect to RabbitMQ and send the response
+  Payload = erlang:term_to_binary(Response),
   Exchange = application:get_env(result_reporting_exchange),
   Routing_key = application:get_env(result_reporting_routing_key),
-  ok = amqp_channel:call(Channel,
+  Publish =
     #'basic.publish'{
       exchange = Exchange,
       routing_key = Routing_key
     },
+  amqp_channel:cast(
+    Channel,
+    Publish,
     #amqp_msg{
-      payload = Response
+      payload = Payload
     }).

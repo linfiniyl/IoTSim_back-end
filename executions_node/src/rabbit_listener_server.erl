@@ -42,7 +42,6 @@ init([]) ->
   %% Start consuming messages from the queue
   #'basic.consume_ok'{} =
     amqp_channel:call(Channel, #'basic.consume'{queue = Queue}),
-
   %% Store the channel in the server state
   {ok, #state{rabbit_channel = Channel, rabbit_connection = Connection}}.
 
@@ -83,9 +82,13 @@ stop(Pid) ->
 %%%===================================================================
 
 handle_cast({start, Args}, State) ->
-  {args, {supervisor_id, Supervisor_id}, _} = Args,
+  {args, {supervisor_id, Supervisor_id},
+    _,
+    _,
+    _,
+    _} = Args,
   %% Create a new supervisor and start the simulation
-  Supervisor = supervisor_node:start_link(Args),
+  {ok, Supervisor} = supervisor_node:start_link(Args),
   %% Install monitor on supervisor
   erlang:monitor(process, Supervisor),
   NewState = State#state{supervisor_pids = [{Supervisor,Args} | State#state.supervisor_pids]},
@@ -173,6 +176,14 @@ handle_info({'DOWN', _, process, Pid, Reason}, State) ->
       {noreply, State#state{supervisor_pids=NewPids}}
   end;
 
+handle_info({'EXIT',Pid}, State) ->
+  %% Удалить супервизора из списка супервизоров
+  NewPids = lists:filter(fun({P, _}) -> P /= Pid end, State#state.supervisor_pids),
+  %% Отправить сообщение о завершении работы через RabbitMQ
+  rabbit_send_response(State#state.rabbit_channel, {finished, {Pid}}),
+  %% Обновить состояние GenServer с новым списком супервизоров
+  {noreply, State#state{supervisor_pids=NewPids}};
+
 handle_info(_Info, State) ->
   {noreply, State}.
 
@@ -188,26 +199,41 @@ code_change(_OldVsn, State = #state{}, _Extra) ->
 
 
 handle_rabbit_message(Message) ->
-  %% Extract the command from the message and handle it in the gen_server
   #amqp_msg{payload = Payload} = Message,
-  Command = erlang:binary_to_term(Payload),
-  handle_command(Command).
-handle_command(Command) ->
+  case jsx:is_json(Payload) of
+    true -> Json = jsx:decode(Payload, [{return_maps, true}]),
+      Command = maps:get(<<"command">>, Json),
+      handle_command(Command, Json);
+    false ->
+      io:format(Payload)
+  end.
+
+handle_command(Command, Body) ->
   case Command of
-    {start, Args} ->
-      io:format("HOLA!~n"),
+    <<"start">> ->
+      SupervisorId = maps:get( <<"supervisorId">>, Body),
+      UUID = maps:get(<<"UUID">>, Body),
+      ArgsOfFunctions = maps:get(<<"ArgsOfFunctions">>, Body),
+      Route = maps:get(<<"route">>, Body),
+      ModuleName = maps:get( <<"moduleName">>, Body),
+      Args ={args, {supervisor_id, SupervisorId},
+        {worker_id ,UUID},
+        ArgsOfFunctions,
+        {route, Route},
+        {module_name ,ModuleName}
+      },
       start(Args);
-    {pause, Pid} ->
+    <<"pause">> ->
+      Pid = maps:get(<<"supervisorId">>, Body),
       pause(Pid);
-    {continue, Pid} ->
+    <<"continue">> ->
+      Pid = maps:get(<<"supervisorId">>, Body),
       continue(Pid);
-    {stop, Pid} ->
+    <<"stop">> ->
+      Pid = maps:get(<<"supervisorId">>, Body),
       stop(Pid);
     _ ->
-      {unknown_command, Command},
-      io:format("Unknown commnand!~n"),
-      io:format(Command),
-      io:format("~n")
+      {unknown_command, Command}
   end.
 
 rabbitmq_config() ->
@@ -221,15 +247,19 @@ rabbitmq_config() ->
 
 rabbit_send_response(Channel ,Response) ->
   %% Connect to RabbitMQ and send the response
+  Payload = erlang:term_to_binary(Response),
   Exchange = application:get_env(executions_node_application, command_and_response_exchange, ""),
   Routing_key = application:get_env(executions_node_application, command_and_response_routing_key, ""),
-  ok = amqp_channel:call(Channel,
+  Publish =
     #'basic.publish'{
         exchange = Exchange,
         routing_key = Routing_key
     },
-    #amqp_msg{
-        payload = Response
+    amqp_channel:cast(
+      Channel,
+      Publish,
+      #amqp_msg{
+        payload = Payload
     }).
 replace_pid(Pid, NewPid) ->
   fun ({X, Y}) ->

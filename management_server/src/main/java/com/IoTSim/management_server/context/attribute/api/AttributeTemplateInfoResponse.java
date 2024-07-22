@@ -23,7 +23,9 @@ public class AttributeTemplateInfoResponse {
     @Schema(description = "Тип атрибута")
     private AttributeType type;
     @Schema(description = "Функция симуляции")
-    private SimulationFunctions simulationFunctions;
+    private SimulationFunctions simulationFunction;
+    @Schema(description = "Идентификатор владельца")
+    private Long ownerId;
     @Schema(description = "Приватность шаблона атрибута")
     private Boolean isPrivate;
 }

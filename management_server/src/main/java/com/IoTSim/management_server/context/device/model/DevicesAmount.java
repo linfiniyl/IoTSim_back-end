@@ -17,13 +17,13 @@ import org.hibernate.annotations.OnDeleteAction;
 public class DevicesAmount {
 
     @Id
-    @Column(name = "simulation_id", insertable=false, updatable=false)
+    @Column(name = "simulation_id", insertable=false, updatable=false, nullable = false)
     private Long simulationId;
     @Id
-    @Column(name = "device_id", insertable=false, updatable=false)
+    @Column(name = "device_id", insertable=false, updatable=false, nullable = false)
     private Long deviceId;
 
-    @Column(name = "amount_entities")
+    @Column(name = "amount_devices", nullable = false)
     private Long amount;
 
     @MapsId("simulationId")

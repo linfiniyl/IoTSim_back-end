@@ -4,6 +4,7 @@ package com.IoTSim.management_server.context.user.model;
 import com.IoTSim.management_server.context.attribute.model.AttributeAmount;
 import com.IoTSim.management_server.context.attribute.model.AttributeTemplate;
 import com.IoTSim.management_server.context.device.model.Device;
+import com.IoTSim.management_server.context.device.model.DevicesAmount;
 import com.IoTSim.management_server.context.simulation.model.Simulation;
 import com.IoTSim.management_server.context.simulation.model.SimulationProcess;
 import jakarta.persistence.Entity;
@@ -25,22 +26,22 @@ import java.util.*;
 @Table(name = "users")
 public class User implements UserDetails {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id")
     private Long id;
-    @Column(name = "first_name")
+    @Column(name = "first_name", nullable = false)
     private String firstname;
-    @Column(name = "last_name")
+    @Column(name = "last_name", nullable = false)
     private String lastname;
-    @Column(name = "password")
+    @Column(name = "password", nullable = false)
     private String password;
     @Transient
     private String passwordConfirm;
-    @Column(name = "email", unique = true)
+    @Column(name = "email", unique = true, nullable = false)
     private String email;
-    @Column(name = "is_enabled")
+    @Column(name = "is_enabled", nullable = false)
     private Boolean isEnabled;
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     @Column(name = "role", nullable = false)
     private Role role;
 

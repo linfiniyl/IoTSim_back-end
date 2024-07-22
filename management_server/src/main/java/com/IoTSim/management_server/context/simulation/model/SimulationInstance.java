@@ -18,7 +18,7 @@ import java.util.Objects;
 public class SimulationInstance {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
     @Column(name = "device_number", nullable = false)
@@ -26,7 +26,7 @@ public class SimulationInstance {
     @Column(name = "process_starting_time", nullable = false)
     private LocalDateTime processStartingTime;
     @Enumerated(EnumType.STRING)
-    @Column(name = "process_status")
+    @Column(name = "process_status", nullable = false)
     private Status status;
     @ManyToOne(cascade = CascadeType.ALL)
     @JoinColumn(name = "simulation_process_id")

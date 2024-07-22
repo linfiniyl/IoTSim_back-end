@@ -22,8 +22,8 @@
             {rabbitmq_username, <<"user">>},
             {rabbitmq_password, <<"user">>},
             {command_and_response_queue, <<"erlang_nodes_exec_ctrl">>},
-            {command_and_response_exchange, <<"executing_code">>},
-            {command_and_response_routing_key, <<"iot_sim">>},
+            {command_and_response_exchange, <<"iot_sim">>},
+            {command_and_response_routing_key, <<"executing_code">>},
             {result_reporting_queue, <<"erlang_nodes_exec_ctrl">>},
             {result_reporting_exchange, <<"iot_sim">>},
             {result_reporting_routing_key, <<"executing_code">>}

@@ -1,10 +1,10 @@
 package executions_controller.com.code_generation_module.rabbitmq.service;
 
 import executions_controller.com.code_generation_module.entities.*;
-import executions_controller.com.code_generation_module.exceptions.DeviceNotFoundException;
 import executions_controller.com.code_generation_module.repository.*;
 import executions_controller.com.code_generation_module.service.*;
 import lombok.RequiredArgsConstructor;
+import org.json.JSONObject;
 import org.springframework.stereotype.Service;
 
 import java.util.Arrays;
@@ -148,33 +148,25 @@ public class CodeGeneratorService {
         return builder.toString();
     }
 
-    public String generateArguments(Long supervisorId, String moduleName){
+    public JSONObject generateArguments(Long supervisorId, String moduleName){
         SimulationProcess process = simulationProcessRepository.findById(supervisorId)
                 .orElseThrow(RuntimeException::new);
         List<AttributeAmount> amounts = attributeAmountRepository
                 .findBySupervisorId(supervisorId);
+        JSONObject json = new JSONObject();
+        json.put("command", "start");
+        json.put("supervisorId", supervisorId);
+        json.put("UUID", Arrays.toString(simulationInstanceRepository
+                .findBySimulationProcessId(process.getId())
+                .stream()
+                .map(SimulationInstance::getId).distinct().toArray()));
+        json.put("ArgsOfFunctions",  amounts.stream()
+                .map(AttributeAmount::getStartingValue)
+                .collect(Collectors.toList()));
+        json.put("route", Arrays.toString(routePointRepository
+                .findByRouteSimulationsId(process.getSimulationId()).toArray()));
+        json.put("moduleName", moduleName);
 
-        String func_args = "{" +
-                "args," +
-                amounts.stream()
-                        .map(a -> "{" + a.getAttributeTemplate().getName() + ", " + a.getStartingValue() + "}")
-                        .collect(Collectors.joining(", ", ", ", "")) +
-                "}";
-
-        return "{args, {supervisor_id," +
-                supervisorId +
-                "}, {worker_id, " +
-                Arrays.toString(simulationInstanceRepository
-                        .findBySimulationProcessId(process.getId())
-                        .stream()
-                        .map(SimulationInstance::getId).distinct().toArray()) +
-                "}, {func_args, " +
-                func_args +
-                "}, {route, " +
-                Arrays.toString(routePointRepository
-                        .findByRouteSimulationsId(process.getSimulationId()).toArray()) +
-                "}, {module_name , " +
-                moduleName +
-                "}}";
+        return json;
     }
 }

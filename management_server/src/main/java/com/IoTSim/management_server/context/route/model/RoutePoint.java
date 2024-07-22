@@ -15,12 +15,12 @@ import org.geolatte.geom.Position;
 @Table(name = "route_point")
 public class RoutePoint {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "location", columnDefinition = "geometry(Point, 4326)")
+    @Column(name = "location", columnDefinition = "geometry(Point, 4326)", nullable = false)
     private Point<Position> location;
 
     @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "route_id", unique = true)
+    @JoinColumn(name = "route_id", nullable = false)
     private Route route;
 }

@@ -46,7 +46,7 @@ public class UserController {
                 .build();
     }
 
-    @PutMapping(Endpoints.USER_ID)
+    @PutMapping
     public ResponseEntity<?> updateUser(
             @RequestBody UserDto userDto
     ){

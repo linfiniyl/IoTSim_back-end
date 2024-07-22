@@ -57,20 +57,7 @@ public class UserService implements UserDetailsService {
         }
 
     }
-/*
-    public ResponseEntity<?> confirmEmail(String confirmationToken) {
-        ConfirmationToken token = confirmationTokenRepository.findByConfirmationToken(confirmationToken).get();
 
-        if(token != null)
-        {
-            User user = userRepository.findByEmailIgnoreCase(token.getUser().getEmail()).get();
-            user.setIsEnabled(true);
-            userRepository.save(user);
-            return ResponseEntity.ok("Email verified successfully!");
-        }
-        return ResponseEntity.badRequest().body("Error: Couldn't verify email");
-    }
-*/
     @Transactional
     public void updateUser(UserDto userDto){
         User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();

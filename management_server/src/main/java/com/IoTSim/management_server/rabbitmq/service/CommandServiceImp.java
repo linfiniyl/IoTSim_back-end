@@ -1,8 +1,7 @@
 package com.IoTSim.management_server.rabbitmq.service;
 
-import com.IoTSim.management_server.api.exceptions.RelationDeviceException;
-import com.IoTSim.management_server.api.exceptions.SimulationNotFoundException;
-import com.IoTSim.management_server.api.exceptions.UserNotFoundException;
+import com.IoTSim.management_server.api.exceptions.*;
+import com.IoTSim.management_server.context.attribute.repository.AttributeRelationRepository;
 import com.IoTSim.management_server.context.device.model.DevicesAmount;
 import com.IoTSim.management_server.context.device.repository.DevicesAmountRepository;
 import com.IoTSim.management_server.context.simulation.model.Simulation;
@@ -14,7 +13,9 @@ import com.IoTSim.management_server.context.simulation.repository.SimulationProc
 import com.IoTSim.management_server.context.simulation.repository.SimulationRepository;
 import com.IoTSim.management_server.context.user.model.User;
 import lombok.RequiredArgsConstructor;
+import org.json.JSONObject;
 import org.springframework.amqp.core.Message;
+import org.springframework.amqp.core.MessageProperties;
 import org.springframework.amqp.rabbit.core.RabbitTemplate;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.security.access.AccessDeniedException;
@@ -35,6 +36,7 @@ public class CommandServiceImp implements CommandService {
     private final SimulationProcessRepository simulationProcessRepository;
     private final SimulationInstanceRepository simulationInstanceRepository;
     private final DevicesAmountRepository devicesAmountRepository;
+    private final AttributeRelationRepository attributeRelationRepository;
     private final RabbitTemplate rabbitTemplate;
 
     @Override
@@ -52,9 +54,28 @@ public class CommandServiceImp implements CommandService {
         if (!Objects.equals(owner.getId(), user.getId()) && simulation.getIsPrivate()){
             throw new AccessDeniedException("Access Denied");
         }
-        Message message = new Message("Start simulation".getBytes());
-        message.getMessageProperties().setHeader("simulationId", simulationId);
-        message.getMessageProperties().setHeader("userId", user.getId());
+
+        if (devicesAmountRepository.sumDevicesBySimulationId(simulationId) == 0){
+            throw new SimulationWithoutDevicesException();
+        }
+        if (devicesAmountRepository.sumDevicesWithoutAttributesBySimulationId(simulationId) > 0){
+            throw new DeviceWithoutAttributesException();
+        }
+        if (attributeRelationRepository.countNotDefinedAttributesBySimulationId(simulationId) > 0){
+            throw new DeviceWithUndefinedAttributeException();
+        }
+
+        if (simulation.getSimulationStatus().equals(Status.IN_PROCESS)
+            || simulation.getSimulationStatus().equals(Status.STARTING)
+        ){
+            throw new SimulationHasAlreadyStartedException();
+        }
+        JSONObject command = new JSONObject();
+        command.put("command", "Start simulation");
+        command.put("simulationId", simulationId);
+        command.put("userId", user.getId());
+        Message message = new Message(command.toString().getBytes());
+        message.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
         rabbitTemplate.convertAndSend(routingKey, message);
         simulation.setSimulationStatus(Status.STARTING);
         createSimulationProcesses(simulation, user);
@@ -76,14 +97,22 @@ public class CommandServiceImp implements CommandService {
         if (!Objects.equals(owner.getId(), user.getId()) && simulation.getIsPrivate()){
             throw new AccessDeniedException("Access Denied");
         }
-        Message message = new Message("Stop simulation".getBytes());
-        message.getMessageProperties().setHeader("simulationId", simulationId);
-        message.getMessageProperties().setHeader("userId", user.getId());
+        if (simulation.getSimulationStatus().equals(Status.STOPPED)){
+            throw new SimulationHasAlreadyStoppedException();
+        }
+
+        JSONObject command = new JSONObject();
+        command.put("command", "Stop simulation");
+        command.put("simulationId", simulationId);
+        command.put("userId", user.getId());
+        Message message = new Message(command.toString().getBytes());
+        message.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
+
         rabbitTemplate.convertAndSend(routingKey, message);
-        simulation.setSimulationStatus(Status.STOPPED);
+        simulation.setSimulationStatus(Status.STOPPING);
         simulationRepository.save(simulation);
     }
-
+/*
     @Override
     @Transactional
     public void restartSimulation(Long simulationId) {
@@ -101,14 +130,18 @@ public class CommandServiceImp implements CommandService {
             throw new AccessDeniedException("Access Denied");
         }
 
-        Message message = new Message("Restart simulation".getBytes());
-        message.getMessageProperties().setHeader("simulationId", simulationId);
-        message.getMessageProperties().setHeader("userId", user.getId());
+        JSONObject command = new JSONObject();
+        command.put("command", "Restart simulation");
+        command.put("simulationId", simulationId);
+        command.put("userId", user.getId());
+        Message message = new Message(command.toString().getBytes());
+        message.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
+
         rabbitTemplate.convertAndSend(routingKey, message);
         simulation.setSimulationStatus(Status.RESTARTING);
         simulationRepository.save(simulation);
     }
-
+*/
     @Transactional
     @Override
     public void createSimulationProcesses(Simulation simulation, User user){
@@ -152,5 +185,71 @@ public class CommandServiceImp implements CommandService {
             simulationInstanceRepository.saveAll(Objects.requireNonNull(instanceSetQueue.poll()));
         }
         simulationProcessRepository.saveAll(processSet);
+    }
+
+    @Override
+    @Transactional
+    public void pauseSimulation(Long simulationId) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (ObjectUtils.isEmpty(user)){
+            throw new UserNotFoundException();
+        }
+        Simulation simulation = simulationRepository
+                .findById(simulationId)
+                .orElseThrow(SimulationNotFoundException::new);
+        User owner = simulation.getUser();
+        if (!Objects.equals(owner.getId(), user.getId()) && simulation.getIsPrivate()){
+            throw new AccessDeniedException("Access Denied");
+        }
+        if (simulation.getSimulationStatus().equals(Status.PAUSING)
+            || simulation.getSimulationStatus().equals(Status.PAUSED)
+        ){
+            throw new SimulationHasAlreadyStoppedException();
+        }
+
+        JSONObject command = new JSONObject();
+        command.put("command", "Pause simulation");
+        command.put("simulationId", simulationId);
+        command.put("userId", user.getId());
+        Message message = new Message(command.toString().getBytes());
+        message.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
+
+        rabbitTemplate.convertAndSend(routingKey, message);
+        simulation.setSimulationStatus(Status.PAUSING);
+        simulationRepository.save(simulation);
+    }
+
+    @Override
+    @Transactional
+    public void continueSimulation(Long simulationId) {
+        User user = (User) SecurityContextHolder.getContext().getAuthentication().getPrincipal();
+
+        if (ObjectUtils.isEmpty(user)){
+            throw new UserNotFoundException();
+        }
+        Simulation simulation = simulationRepository
+                .findById(simulationId)
+                .orElseThrow(SimulationNotFoundException::new);
+        User owner = simulation.getUser();
+        if (!Objects.equals(owner.getId(), user.getId()) && simulation.getIsPrivate()){
+            throw new AccessDeniedException("Access Denied");
+        }
+        if (simulation.getSimulationStatus().equals(Status.IN_PROCESS)
+            || simulation.getSimulationStatus().equals(Status.CONTINUING)
+        ){
+            throw new SimulationIsAlreadyRunningException();
+        }
+
+        JSONObject command = new JSONObject();
+        command.put("command", "Continue simulation");
+        command.put("simulationId", simulationId);
+        command.put("userId", user.getId());
+        Message message = new Message(command.toString().getBytes());
+        message.getMessageProperties().setContentType(MessageProperties.CONTENT_TYPE_JSON);
+
+        rabbitTemplate.convertAndSend(routingKey, message);
+        simulation.setSimulationStatus(Status.CONTINUING);
+        simulationRepository.save(simulation);
     }
 }

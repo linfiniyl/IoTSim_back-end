@@ -18,17 +18,17 @@ import lombok.*;
 @IdClass(AttributeAmountId.class)
 public class AttributeAmount {
     @Id
-    @Column(name = "device_id")
+    @Column(name = "device_id", nullable = false)
     private Long deviceId;
     @Id
-    @Column(name = "attribute_id")
+    @Column(name = "attribute_id", nullable = false)
     private Long attributeId;
     @Id
-    @Column(name = "simulation_id")
-    private Long simulationId;
-    @Id
-    @Column(name = "user_id")
+    @Column(name = "user_id", nullable = false)
     private Long userId;
+    @Id
+    @Column(name = "simulation_id", nullable = false)
+    private Long simulationId;
     @Column(name = "starting_value", nullable = false)
     private Long startingValue;
     @MapsId("deviceId")
@@ -40,14 +40,14 @@ public class AttributeAmount {
     @JoinColumn(name = "attribute_id", referencedColumnName = "id")
     private AttributeTemplate attributeTemplate;
 
-    @MapsId("simulationId")
-    @ManyToOne(cascade = CascadeType.ALL, optional = false)
-    @JoinColumn(name = "simulation_id", nullable = false)
-    private Simulation simulation;
-
-    @MapsId("userId")
-    @ManyToOne(cascade = CascadeType.ALL, optional = false)
-    @JoinColumn(name = "user_id", nullable = false)
+    @MapsId("user_id")
+    @ManyToOne(cascade = {CascadeType.ALL})
+    @JoinColumn(name = "user_id",  referencedColumnName = "id")
     private User user;
+
+    @MapsId("simulation_id")
+    @ManyToOne(cascade = CascadeType.ALL)
+    @JoinColumn(name = "simulation_id", referencedColumnName = "id")
+    private Simulation simulation;
 
 }

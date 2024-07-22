@@ -17,7 +17,7 @@ import java.util.Set;
 @Table(name = "simulation_process")
 public class SimulationProcess {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     @Column(name = "id", nullable = false)
     private Long id;
     @Column(name = "simulation_id", nullable = false)
@@ -32,7 +32,7 @@ public class SimulationProcess {
     private Set<SimulationInstance> simulationInstances = new LinkedHashSet<>();
 
     @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "user_id")
+    @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
     @Override

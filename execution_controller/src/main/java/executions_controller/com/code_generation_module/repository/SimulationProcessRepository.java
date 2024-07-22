@@ -4,6 +4,7 @@ import executions_controller.com.code_generation_module.entities.SimulationProce
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -13,5 +14,10 @@ public interface SimulationProcessRepository extends JpaRepository<SimulationPro
 
     @Query("select s from SimulationProcess s where s.user.id = ?1 and s.simulationId = ?2 and s.deviceId = ?3")
     Optional<SimulationProcess> findBySimulationIdAndUserIdAndDeviceId(Long id, Long simulationId, Long deviceId);
+
+    @Query("select s from SimulationProcess s where s.simulationId = ?1 and s.user.id = ?2")
+    List<SimulationProcess> findBySimulationIdAndUserId(Long simulationId, Long id);
+
+
 
 }

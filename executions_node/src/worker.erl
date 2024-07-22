@@ -21,14 +21,11 @@
 %%%===================================================================
 
 start_link(UUID, Args, Route) ->
-  gen_server:start_link({local, ?SERVER}, ?MODULE, [{UUID, Args, Route}], []).
+  gen_server:start_link( ?MODULE, [{UUID, Args, Route}],[]).
 
-init(Params) ->
+init([Params]) ->
   {UUID, Args, Route} = Params,
-  io:format("Starting worker "),
-  io:format(UUID),
-  io:format("~n"),
-  State = #worker_state{pause = false, args = Args, uuid = UUID, points = Route, acc = []},
+  State = #worker_state{pause = false, args = Args, time = 0 ,uuid = UUID, points = Route, acc = []},
   self() ! start_simulation,
   {ok, State}.
 
@@ -51,14 +48,14 @@ handle_info(start_simulation, State = #worker_state{}) ->
   io:format("Start ~n "),
   simulate(State#worker_state.points,
     State#worker_state.acc, State#worker_state.args,
-    State#worker_state.time, State#worker_state.pause),
+    State#worker_state.time, State#worker_state.pause, State),
   {noreply, State};
 
 handle_info(_Info, State = #worker_state{}) ->
   {noreply, State}.
 
 terminate(_Reason, _State = #worker_state{}) ->
-  result_handler_server ! {stop_reporting,
+  'result_handler_server' ! {stop_reporting,
     {uuid, _State#worker_state.uuid}, {reason, _Reason}, {time, _State#worker_state.time}},
     ok.
 
@@ -69,21 +66,25 @@ code_change(_OldVsn, State = #worker_state{}, _Extra) ->
 %%% Internal functions
 %%%===================================================================
 
-simulate([], _, _, Time, pause = false) ->
-  result_handler_server ! {finished, {process, self()},{uuid, #worker_state.uuid}, {time, Time}},
+simulate([], _, _, Time, false, State) ->
+  gen_server:cast(result_handler_server,
+    {finished, {process, self()},{uuid, State#worker_state.uuid}, {time, Time}}
+  ),
   ok;
 
-simulate([Point |Route], Acc , Args, Time, pause = false) ->
-  result_handler_server ! calculate(Args, Point, Time),
-  #worker_state{points = Route, acc = [Point | Acc], time = Time + 1},
-  simulate(Route, [Point | Acc], Args, Time + 1, #worker_state.pause);
+simulate([Point |Route], Acc , Args, Time, false, State) ->
+  Result = calculate(Args, Point, Time),
+  gen_server:cast(result_handler_server, Result),
+  State#worker_state{points = Route, acc = Acc, time = Time},
+  timer:sleep(1000),
+  simulate(Route, [Point | Acc], Args, Time + 1, State#worker_state.pause, State);
 
-simulate([], _, _, Time, pause = true) ->
-  #worker_state{points = [], time = Time},
+simulate([], _, _, Time, true, State) ->
+  State#worker_state{points = [], time = Time},
   ok;
 
-simulate([Point |Route], Acc , _, Time, pause = true) ->
-  #worker_state{points = Route, acc = [Point | Acc], time = Time + 1},
+simulate([Point |Route], Acc , _, Time, true, State) ->
+  State#worker_state{points = Route, acc = Acc, time = Time},
   ok.
 
 %%Calculating simulation
@@ -93,8 +94,8 @@ calculate(Args, Point, Time) ->
   %%% {args, {value_name_1, value_1}, {value_name_2, value_2}, {....}, {value_name_n, value_n}} = Args,
   %%%
   %%%-------------------------------------------------------------------
-  {func_args, {speed, Speed_value}, {fuel, Fuel_value}} = Args,
-  {calculation, {simulation,{uuid, #worker_state.uuid}},
+  [Speed_value, Fuel_value] = Args,
+  {calculation, {{simulation,{uuid, #worker_state.uuid}},
     {point, Point},
     %%%-----------------------------------------------------------------
     %%%
@@ -103,5 +104,5 @@ calculate(Args, Point, Time) ->
     %%%
     %%%
     %%%-----------------------------------------------------------------
-    {speed, Speed_value + Speed_value * math:sin(Time + rand:uniform(rand:normal_s(Time)))},
-    {fuel, Fuel_value + Fuel_value * math:cos(Time + rand:uniform(rand:normal_s(Time)))}}.
+    {speed, Speed_value + Speed_value * math:sin(Time + Time * rand:uniform())},
+    {fuel, Fuel_value + Fuel_value * math:cos(Time + Time * rand:uniform())}}}.

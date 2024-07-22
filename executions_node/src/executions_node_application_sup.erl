@@ -17,22 +17,22 @@ init([]) ->
   Children = [
     %% Child specification for rabbit_listener_server
     #{
-      id => 'rabbit_listener_server',
+      id => rabbit_listener_server,
       start => {'rabbit_listener_server', start_link, []},
       restart => permanent,
       shutdown => 1000,
       type => worker,
-      modules => ['rabbit_listener_server']
+      modules => [rabbit_listener_server]
     },
 
     %% Child specification for result_handler_server
     #{
-      id => 'result_handler_server',
-      start => {'result_handler_server', start_link, []},
+      id => result_handler_server,
+      start => {result_handler_server, start_link, []},
       restart => permanent,
       shutdown => 1000,
       type => worker,
-      modules => ['result_handler_server']
+      modules => [result_handler_server]
     }
   ],
 

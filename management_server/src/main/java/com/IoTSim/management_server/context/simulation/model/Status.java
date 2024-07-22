@@ -6,6 +6,11 @@ public enum Status {
     ERROR,
     STARTING,
     RESTARTING,
+    STOPPING,
+    CONTINUING,
     NOT_RUNNING,
+    PAUSED,
+    PAUSING,
+    DONE,
     WARNING;
 }

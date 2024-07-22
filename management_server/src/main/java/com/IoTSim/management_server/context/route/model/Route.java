@@ -21,11 +21,11 @@ import java.util.Set;
 @Table(name = "route")
 public class Route {
     @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
+    @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
-    @Column(name = "route_name")
+    @Column(name = "route_name", nullable = false)
     private String name;
-    @Column(name = "is_private")
+    @Column(name = "is_private", nullable = false)
     private Boolean isPrivate;
 
     @OneToMany(mappedBy = "route", orphanRemoval = true)
@@ -33,7 +33,7 @@ public class Route {
 
 
     @ManyToOne(cascade = CascadeType.ALL)
-    @JoinColumn(name = "owner_id")
+    @JoinColumn(name = "owner_id", nullable = false)
     private User owner;
 
     @OneToMany(mappedBy = "route", cascade = CascadeType.ALL)

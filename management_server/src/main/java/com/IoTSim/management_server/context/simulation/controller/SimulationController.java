@@ -58,7 +58,7 @@ public class SimulationController {
                 .body(simulationService.createSimulation(request));
     }
 
-    @PutMapping(Endpoints.SIMULATION_ID)
+    @PutMapping
     public ResponseEntity<?> updateSimulation(
             @RequestBody SimulationDto simulationDto
     ){

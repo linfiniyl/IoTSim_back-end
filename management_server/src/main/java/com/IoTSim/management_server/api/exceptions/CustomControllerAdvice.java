@@ -36,4 +36,26 @@ public class CustomControllerAdvice {
                 .status(HttpStatus.FORBIDDEN)
                 .body(new ErrorMessage(exception.getMessage()));
     }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(value ={
+            SimulationHasAlreadyPausedException.class, SimulationHasAlreadyStartedException.class,
+            SimulationIsAlreadyRunningException.class, SimulationHasAlreadyStoppedException.class
+    })
+    public ResponseEntity<ErrorMessage> simulationCommandExceptionHandler(RuntimeException exception){
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorMessage(exception.getMessage()));
+    }
+
+    @ResponseStatus(HttpStatus.BAD_REQUEST)
+    @ExceptionHandler(value = {
+            SimulationWithoutDevicesException.class, DeviceWithoutAttributesException.class,
+            DeviceWithUndefinedAttributeException.class
+    })
+    public ResponseEntity<ErrorMessage> simulationStartingExceptionHandler(RuntimeException exception){
+        return ResponseEntity
+                .status(HttpStatus.BAD_REQUEST)
+                .body(new ErrorMessage(exception.getMessage()));
+    }
 }
