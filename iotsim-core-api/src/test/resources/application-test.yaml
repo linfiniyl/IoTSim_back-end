@@ -1,0 +1,61 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://localhost:15432/${spring.liquibase.parameters.postgres-db.name}?createDatabaseIfNotExist=true
+    username: postgres
+    password: admin
+
+  jpa:
+    properties:
+      hibernate:
+        jdbc:
+          lob:
+            non_contextual_creation: true
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        default_schema: ${spring.liquibase.parameters.postgres-db.schema}
+    hibernate:
+      temp:
+        use_jdbc_metadata_defaults: false
+      ddl-auto: none
+  rabbitmq:
+    host: localhost
+    port: 5672
+    username: guest
+    password: guest
+    queue: api_and_exec_ctrl
+    exchange: iot_sim
+    routing_key: command_to_execution_controller
+  liquibase:
+    change-log: classpath:db/changelog/db.changelog-master.xml
+    url: ${spring.datasource.url}
+    parameters:
+      postgres-db:
+        name: iotsim_db
+        schema: IOT_SIM
+        owner: ${spring.datasource.username}
+        encoding: UTF-8
+        lc-collate: Russian_Russia.1251
+        lc-ctype: Russian_Russia.1251
+        tablespace: pg_default
+        connection-limit: -1
+    user: ${spring.datasource.username}
+    password: ${spring.datasource.password}
+
+token:
+  signing:
+    key: k1gFkf7fxntESE71nV6L7AZ1YktPiEsdixYufaZDpfkVDEt1e6CHdblGkomqWeLe
+
+minio:
+  access_key: admin
+  secret_key: password
+  url: http://localhost:9000
+  bucket_name: iotsim
+
+logging:
+  file:
+    name: logs/application.log
+  logback:
+    rollingpolicy:
+      max-file-size: 10MB
+      max-history: 5
+  level:
+    root: DEBUG

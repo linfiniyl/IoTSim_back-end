@@ -1,0 +1,618 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<databaseChangeLog xmlns="http://www.liquibase.org/xml/ns/dbchangelog"
+                   xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+                   xsi:schemaLocation="http://www.liquibase.org/xml/ns/dbchangelog
+                   https://www.liquibase.org/xml/ns/dbchangelog/dbchangelog-latest.xsd">
+
+    <changeSet id="create-user-table" author="agafangelos dmitriy">
+        <createTable tableName="user" schemaName="${postgres-db.schema}"
+                     ifNotExists="true" tablespace="${postgres-db.tablespace}">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="email" type="varchar(255)" >
+                <constraints nullable="false" unique="true"/>
+            </column>
+            <column name="first_name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="is_enabled" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="last_name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="password" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="role" type="varchar(255)">
+                <constraints
+                    nullable="false"
+                    checkConstraint=
+                        "CHECK ( role::text = ANY (
+                                    ARRAY[
+                                        'USER'::character varying,
+                                        'ADMIN'::character varying
+                                    ]::text[]))"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="create-attribute-table" author="Agafangelos Dmitriy">
+        <createTable tableName="attribute" schemaName="${postgres-db.schema}"
+                     ifNotExists="true" tablespace="${postgres-db.tablespace}">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="is_private" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="simulation_function" type="varchar(255)">
+                <constraints
+                        nullable="false"
+                        checkConstraint=
+                                "CHECK ( simulation_function::text = ANY (
+                                    ARRAY[
+                                        'SIN'::character varying,
+                                        'COS'::character varying,
+                                        'ARCTG'::character varying,
+                                        'ARCSIN'::character varying
+                                    ]::text[]))"/>
+            </column>
+            <column name="type" type="varchar(255)">
+                <constraints
+                        nullable="false"
+                        checkConstraint=
+                                "CHECK ( simulation_function::text = ANY (
+                                    ARRAY[
+                                        'FUNCTION'::character varying,
+                                        'INTEGER'::character varying,
+                                        'FLAG'::character varying
+                                    ]::text[]))"/>
+            </column>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    <changeSet id="create-attribute-user-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="attribute_user_relation"
+                                            foreignKeyTableName="attribute"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+        <addForeignKeyConstraint baseTableName="attribute" baseColumnNames="user_id"
+                                 referencedTableName="user" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="attribute_user_relation"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-device-table" author="Agafangelos Dmitriy">
+        <createTable tableName="device" schemaName="${postgres-db.schema}"
+                     ifNotExists="true" tablespace="${postgres-db.tablespace}">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="description" type="varchar(255)"/>
+            <column name="is_private" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="picture" type="varchar(255)"/>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+    
+    <changeSet id="create-device-user-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="device_user_relation"
+                                            foreignKeyTableName="device"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="device" baseColumnNames="user_id"
+                                 referencedTableName="user" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="device_user_relation"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+    
+    <changeSet id="create-device-attribute-buffer-table" author="Agafangelos Dmitriy">
+        <createTable tableName="attribute_relation" schemaName="${postgres-db.schema}"
+                     ifNotExists="true" tablespace="${postgres-db.tablespace}">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="attribute_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="device_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="create-unique-attribute-relation" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <uniqueConstraintExists tableName="attribute_relation"
+                                        schemaName="${postgres-db.schema}"
+                                        constraintName="unique_attribute_device"/>
+            </not>
+        </preConditions>
+
+        <addUniqueConstraint
+                schemaName="${postgres-db.schema}"
+                tableName="attribute_relation"
+                columnNames="attribute_id, device_id"
+                constraintName="unique_attribute_device"/>
+    </changeSet>
+
+    <changeSet id="create-attribute-relation-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="attribute_relation_attribute"
+                                            foreignKeyTableName="attribute_relation"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="attribute_relation" baseColumnNames="attribute_id"
+                                 referencedTableName="attribute" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="attribute_relation_attribute"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+    <changeSet id="create-device-relation-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="device_relation"
+                                            foreignKeyTableName="attribute_relation"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="attribute_relation" baseColumnNames="device_id"
+                                 referencedTableName="device" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="device_relation"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-simulation-table" author="Agafangelos Dmitriy">
+        <createTable tableName="simulation" schemaName="${postgres-db.schema}"
+                     ifNotExists="true" tablespace="${postgres-db.tablespace}">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="is_private" type="boolean"/>
+            <column name="name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(255)">
+                <constraints
+                        nullable="false"
+                        checkConstraint=
+                                "CHECK ( status::text = ANY (
+                                    ARRAY[
+                                        'IN_PROCESS'::character varying,
+                                        'STOPPED'::character varying,
+                                        'ERROR'::character varying,
+                                        'STARTING'::character varying,
+                                        'RESTARTING'::character varying,
+                                        'NOT_RUNNING'::character varying,
+                                        'WARNING'::character varying
+                                    ]::text[]))"/>
+            </column>
+            <column name="route_id" type="bigint"/>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="create-device-amount-table" author="agafangelos dmitriy">
+        <createTable tableName="devices_amount" schemaName="${postgres-db.schema}"
+                     ifNotExists="true" tablespace="${postgres-db.tablespace}">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="device_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="simulation_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount_devices" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="amount_entities" type="bigint"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="create-unique-devices-amount" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <uniqueConstraintExists tableName="devices_amount"
+                                        schemaName="${postgres-db.schema}"
+                                        constraintName="unique_attribute_device_amount"/>
+            </not>
+        </preConditions>
+
+        <addUniqueConstraint
+                schemaName="${postgres-db.schema}"
+                tableName="devices_amount"
+                columnNames="device_id, simulation_id"
+                constraintName="unique_attribute_device_amount"/>
+    </changeSet>
+
+    <changeSet id="create-simulation-device-amount-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="simulation_device_relation"
+                                            foreignKeyTableName="devices_amount"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="devices_amount" baseColumnNames="simulation_id"
+                                 referencedTableName="simulation" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="simulation_device_relation"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-device-device-amount-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="device_device_amount_relation"
+                                            foreignKeyTableName="devices_amount"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="devices_amount" baseColumnNames="device_id"
+                                 referencedTableName="device" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="device_device_amount_relation"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-attribute-amount-table" author="Agafangelos Dmitriy">
+        <createTable tableName="attribute_amount" schemaName="${postgres-db.schema}"
+                     ifNotExists="true" tablespace="${postgres-db.tablespace}">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="attribute_relation_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="simulation_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="starting_value" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="create-unique-attribute-amount" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <uniqueConstraintExists tableName="attribute_amount"
+                                        schemaName="${postgres-db.schema}"
+                                        constraintName="unique_attribute_amount"/>
+            </not>
+        </preConditions>
+
+        <addUniqueConstraint
+                schemaName="${postgres-db.schema}"
+                tableName="attribute_amount"
+                columnNames="attribute_relation_id, simulation_id, user_id"
+                constraintName="unique_attribute_amount"/>
+    </changeSet>
+
+    <changeSet id="create-attribute-relation-attribute-amount-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="attribute_relation_attribute_amount"
+                                            foreignKeyTableName="attribute_amount"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="attribute_amount" baseColumnNames="attribute_relation_id"
+                                 referencedTableName="attribute_relation" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="attribute_relation_attribute_amount"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-simulation-attribute-amount-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="simulation_attribute_amount"
+                                            foreignKeyTableName="attribute_amount"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="attribute_amount" baseColumnNames="simulation_id"
+                                 referencedTableName="simulation" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="simulation_attribute_amount"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-user-attribute-amount-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="user_attribute_amount"
+                                            foreignKeyTableName="attribute_amount"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="attribute_amount" baseColumnNames="user_id"
+                                 referencedTableName="user" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="user_attribute_amount"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-route-table" author="Agafangelos Dmitriy">
+        <createTable tableName="route" schemaName="${postgres-db.schema}"
+                     ifNotExists="true" tablespace="${postgres-db.tablespace}">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="is_private" type="boolean">
+                <constraints nullable="false"/>
+            </column>
+            <column name="route_name" type="varchar(255)">
+                <constraints nullable="false"/>
+            </column>
+            <column name="owner_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="create-user-route-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="user_route"
+                                            foreignKeyTableName="route"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="route" baseColumnNames="owner_id"
+                                 referencedTableName="user" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="user_route"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-route-point-table" author="Agafangelos Dmitriy">
+        <createTable tableName="route_point" schemaName="${postgres-db.schema}"
+                     ifNotExists="true" tablespace="${postgres-db.tablespace}">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="route_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+        </createTable>
+
+        <sql>
+            ALTER TABLE ${postgres-db.schema}.route_point ADD COLUMN IF NOT EXISTS location public.geometry(Point,4326) NOT NULL;
+        </sql>
+    </changeSet>
+
+    <changeSet id="create-route-point-route-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="route_point_route"
+                                            foreignKeyTableName="route_point"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="route_point" baseColumnNames="route_id"
+                                 referencedTableName="route" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="route_point_route"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-simulation-process-table" author="Agafangelos Dmitriy">
+        <createTable tableName="simulation_process" schemaName="${postgres-db.schema}"
+                     ifNotExists="true" tablespace="${postgres-db.tablespace}">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="device_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="simulation_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="supervisor_pid" type="varchar(255)"/>
+            <column name="user_id" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="status" type="varchar(255)">
+                <constraints
+                        nullable="false"
+                        checkConstraint=
+                                "CHECK ( status::text = ANY (
+                                    ARRAY[
+                                        'IN_PROCESS'::character varying,
+                                        'STOPPED'::character varying,
+                                        'ERROR'::character varying,
+                                        'STARTING'::character varying,
+                                        'RESTARTING'::character varying,
+                                        'NOT_RUNNING'::character varying,
+                                        'WARNING'::character varying
+                                    ]::text[]))"/>
+            </column>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="create-unique-supervisor-pid" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <uniqueConstraintExists tableName="simulation_process"
+                                        schemaName="${postgres-db.schema}"
+                                        constraintName="supervisor_pid"/>
+            </not>
+        </preConditions>
+
+        <addUniqueConstraint tableName="simulation_process"
+                             schemaName="${postgres-db.schema}"
+                             columnNames="supervisor_pid"
+                             constraintName="supervisor_pid"/>
+    </changeSet>
+
+    <changeSet id="create-unique-simulation-process" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <uniqueConstraintExists tableName="simulation_process"
+                                        schemaName="${postgres-db.schema}"
+                                        constraintName="unique_simulation_process"/>
+            </not>
+        </preConditions>
+
+        <addUniqueConstraint tableName="simulation_process"
+                             schemaName="${postgres-db.schema}"
+                             columnNames="device_id, user_id, simulation_id"
+                             constraintName="unique_simulation_process"/>
+    </changeSet>
+
+    <changeSet id="create-simulation-process-simulation-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="simulation_process_simulation"
+                                            foreignKeyTableName="simulation_process"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="simulation_process" baseColumnNames="simulation_id"
+                                 referencedTableName="simulation" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="simulation_process_simulation"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-simulation-process-device-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="simulation_process_device"
+                                            foreignKeyTableName="simulation_process"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="simulation_process" baseColumnNames="device_id"
+                                 referencedTableName="device" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="simulation_process_device"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-simulation-process-user-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="simulation_process_user"
+                                            foreignKeyTableName="simulation_process"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="simulation_process" baseColumnNames="user_id"
+                                 referencedTableName="user" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="simulation_process_user"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+
+    <changeSet id="create-simulation-instance-table" author="Agafangelos Dmitriy">
+        <createTable tableName="simulation_instance" schemaName="${postgres-db.schema}"
+                 ifNotExists="true" tablespace="${postgres-db.tablespace}">
+            <column name="id" type="bigint" autoIncrement="true">
+                <constraints primaryKey="true" nullable="false"/>
+            </column>
+            <column name="device_number" type="bigint">
+                <constraints nullable="false"/>
+            </column>
+            <column name="process_starting_time" type="datetime">
+                <constraints nullable="false"/>
+            </column>
+            <column name="process_status" type="varchar(255)">
+                <constraints
+                        nullable="false"
+                        checkConstraint=
+                                "CHECK ( process_status::text = ANY (
+                                    ARRAY[
+                                        'IN_PROCESS'::character varying,
+                                        'STOPPED'::character varying,
+                                        'ERROR'::character varying,
+                                        'STARTING'::character varying,
+                                        'RESTARTING'::character varying,
+                                        'NOT_RUNNING'::character varying,
+                                        'WARNING'::character varying
+                                    ]::text[]))"/>
+            </column>
+            <column name="simulation_process_id" type="bigint"/>
+        </createTable>
+    </changeSet>
+
+    <changeSet id="create-simulation-instance-simulation-process-foreign-key" author="Agafangelos Dmitriy">
+        <preConditions onFail="MARK_RAN">
+            <not>
+                <foreignKeyConstraintExists foreignKeyName="simulation_instance_simulation_process"
+                                            foreignKeyTableName="simulation_instance"
+                                            schemaName="${postgres-db.schema}"/>
+            </not>
+        </preConditions>
+
+        <addForeignKeyConstraint baseTableName="simulation_instance" baseColumnNames="simulation_process_id"
+                                 referencedTableName="simulation_process" referencedColumnNames="id"
+                                 onUpdate="NO ACTION" onDelete="CASCADE"
+                                 constraintName="simulation_instance_simulation_process"
+                                 baseTableSchemaName="${postgres-db.schema}"
+                                 referencedTableSchemaName="${postgres-db.schema}"/>
+    </changeSet>
+</databaseChangeLog>

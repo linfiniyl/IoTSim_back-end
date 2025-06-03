@@ -1,5 +1,6 @@
 package com.iotsim.erlang_module_compiler.rabbitmq;
 
+import lombok.Getter;
 import org.springframework.amqp.core.Binding;
 import org.springframework.amqp.core.BindingBuilder;
 import org.springframework.amqp.core.DirectExchange;
@@ -11,6 +12,10 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+/**
+ * Конфигурация для rabbitmq
+ */
+@Getter
 @Configuration
 public class RabbitMQConfig {
 

@@ -1,144 +1,75 @@
 package com.iotsim.erlang_module_compiler.Compiler;
 
-import org.springframework.amqp.core.Message;
-import org.springframework.beans.factory.annotation.Autowired;
+import com.iotsim.erlang_module_compiler.MessageDto;
+import com.iotsim.erlang_module_compiler.MessageService;
+import lombok.Data;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
-import java.io.BufferedWriter;
 import java.io.FileOutputStream;
-import java.io.FileWriter;
 import java.io.IOException;
+import java.util.Arrays;
 
+import static com.iotsim.erlang_module_compiler.MessageService.*;
+
+/**
+        Сервис для компиляции Erlang файлов
+ **/
+@Slf4j
+@Data
+@RequiredArgsConstructor
 @Component
 public class ErlangCompilerService {
-    private String fileName;
-    private Long entityId;
-    private Long attributeId;
-    private Message message;
-    private Long userId;
-    private Long simulationId;
-    private Long entityNumber;
-    private Boolean successWriting = false;
-    private Boolean isWindows = System.getProperty("os.name").toLowerCase().startsWith("windows");
 
+    @Value("${directory}")
+    private String directory;
 
-    public ErlangCompilerService(){
-    }
-
-    private boolean writeToFile(){
-        try( FileOutputStream writer = new FileOutputStream(fileName)){
-            byte[] body = message.getBody();
+    /**
+            * Записывает тело сообщения в файл
+     * @param message Сообщение
+     * @return {@code true} - если успешная запись, иначе возвращает {@code false}
+     */
+    private boolean writeToFile(MessageDto message) {
+        try (FileOutputStream writer = new FileOutputStream(directory + message.getFileName())) {
+            byte[] body = message.getMessage().getBody();
             writer.write(body);
-        } catch(IOException e){
-            e.printStackTrace();
+        } catch (IOException e) {
+            log.error("Error with writing in file {}", Arrays.toString(e.getStackTrace()));
             return false;
         }
         return true;
     }
 
-    public int compileErlangFile(){
-        successWriting = writeToFile();
-        if (successWriting){
-            Process process;
-            if (isWindows){
-                try {
-                    process = Runtime.getRuntime().exec(String.format("erl.exe -compile %s", fileName));
-                } catch (IOException e){
-                    e.printStackTrace();
-                    return -1;
+    /**
+     * Компилирует Erlang файл. Код извлекается из полученного сообщения и записывается в файл (.erl)
+     * @param message Сообщение
+     * @return Возращает статус операции.
+     * {@link MessageService#COMPILATION_FAILED} - ошибка компиляции
+     * {@link MessageService#COMPILATION_SUCCESS} - успешная компиляция
+     * {@link MessageService#WRITING_FILE_ERROR} - ошибка записи в файл (.erl)
+     */
+    public String compileErlangFile(MessageDto message) {
+        if (writeToFile(message)) {
+            try {
+                Process process = Runtime
+                        .getRuntime()
+                        .exec(String.format("erl -compile %s", message.getFileName()));
+                try(var errors = process.errorReader()){
+                    if (errors.ready()){
+                        throw new IOException(Arrays.toString(errors.lines().toArray()));
+                    }
+                } catch (Exception processException){
+                    throw new IOException(processException);
                 }
-                return 0;
-            } else {
-                try {
-                    process = Runtime.getRuntime().exec(String.format("erl.exe -compile %s", fileName));
-                } catch (IOException e){
-                    e.printStackTrace();
-                    return -1;
-                }
-                return 0;
+            } catch (IOException e) {
+                log.error("Error with compilation erlang file {}", Arrays.toString(e.getStackTrace()));
+                return COMPILATION_FAILED;
             }
+            return COMPILATION_SUCCESS;
         } else {
-            return -1;
+            return WRITING_FILE_ERROR;
         }
-
-    }
-
-    public String getFileName() {
-        return fileName;
-    }
-
-    public void setFileName(String fileName) {
-        this.fileName = fileName;
-    }
-
-    public Long getEntityId() {
-        return entityId;
-    }
-
-    public void setEntityId(Long entityId) {
-        this.entityId = entityId;
-    }
-
-    public Long getAttribute() {
-        return attributeId;
-    }
-
-    public void setAttribute(Long attributeId) {
-        this.attributeId = attributeId;
-    }
-
-    public Message getMessage() {
-        return message;
-    }
-
-    public void setMessage(Message message) {
-        this.entityId = message.getMessageProperties().getHeader("entityName");
-        this.attributeId = message.getMessageProperties().getHeader("attributeName");
-        this.userId = message.getMessageProperties().getHeader("userId");
-        this.simulationId = message.getMessageProperties().getHeader("simulationId");
-        this.entityNumber = message.getMessageProperties().getHeader("entityNumber");
-        fileName = "${Directory}" + "${file_name}" + "_" + userId + "_" + simulationId + "_" +
-                entityId +"_" + entityNumber + "_" + attributeId;
-        this.message = message;
-    }
-
-    public Long getUserId() {
-        return userId;
-    }
-
-    public void setUserId(Long userId) {
-        this.userId = userId;
-    }
-
-    public Long getSimulationId() {
-        return simulationId;
-    }
-
-    public void setSimulationId(Long simulationId) {
-        this.simulationId = simulationId;
-    }
-
-    public Long getEntityNumber() {
-        return entityNumber;
-    }
-
-    public void setEntityNumber(Long entityNumber) {
-        this.entityNumber = entityNumber;
-    }
-
-    public Boolean getSuccessWriting() {
-        return successWriting;
-    }
-
-    public void setSuccessWriting(Boolean successWriting) {
-        this.successWriting = successWriting;
-    }
-
-    public Boolean getWindows() {
-        return isWindows;
-    }
-
-    public void setWindows(Boolean windows) {
-        isWindows = windows;
     }
 }
